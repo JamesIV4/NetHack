@@ -247,6 +247,10 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
         let cbName = UTF8ToString(cb_name);
         // console.log("local_callback:", cbName, fmt, name);
 
+        if (typeof globalThis.nethackGlobal !== "object") {
+            throw new Error(`nethackGlobal not configured when calling '${name}'`);
+        }
+
         // get pointer / type conversion helpers
         let getPointerValue = globalThis.nethackGlobal.helpers.getPointerValue;
         let setPointerValue = globalThis.nethackGlobal.helpers.setPointerValue;
@@ -266,14 +270,15 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
 
         // do the callback
         let userCallback = globalThis[cbName];
-        runJsEventLoop(() => userCallback.call(this, name, ... jsArgs)).then((retVal) => {
+        let ret = userCallback.call(this, name, ... jsArgs);
+        Promise.resolve(ret).then((retVal) => {
             // save the return value
             setPointerValue(name, ret_ptr, retType, retVal);
             // return
-            setTimeout(() => {
+            runJsEventLoop(() => {
                 reentryMutexUnlock();
                 wakeUp();
-            }, 0);
+            });
         });
 
         function getArg(name, ptr, type) {
@@ -288,12 +293,8 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
         // if is true, it throws an exception to break out of main(), but doesn't get caught because
         // the stack isn't running under main() anymore...
         // I think this is suboptimal, but we will have to live with it (for now?)
-        async function runJsEventLoop(cb) {
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve(cb());
-                }, 0);
-            });
+        function runJsEventLoop(cb) {
+            setTimeout(cb, 0);
         }
 
         function reentryMutexLock(name) {
