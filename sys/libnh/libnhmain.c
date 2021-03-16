@@ -77,6 +77,11 @@ nhmain(int argc, char *argv[])
     // for (i = 0; i < argc; i++) {
     //     printf ("argv[%d]: %s\n", i, argv[i]);
     // }
+#ifdef __EMSCRIPTEN__
+    js_helpers_init();
+    js_constants_init();
+    js_globals_init();
+#endif
 
     early_init();
 
@@ -196,11 +201,6 @@ nhmain(int argc, char *argv[])
     process_options(argc, argv); /* command line options */
 #ifdef WINCHAIN
     commit_windowchain();
-#endif
-#ifdef __EMSCRIPTEN__
-    js_helpers_init();
-    js_constants_init();
-    js_globals_init();
 #endif
     init_nhwindows(&argc, argv); /* now we can set up window system */
 #ifdef _M_UNIX
