@@ -74,10 +74,6 @@ nhmain(int argc, char *argv[])
     boolean exact_username;
     boolean resuming = FALSE; /* assume new game */
     boolean plsel_once = FALSE;
-    // int i;
-    // for (i = 0; i < argc; i++) {
-    //     printf ("argv[%d]: %s\n", i, argv[i]);
-    // }
 
     early_init(argc, argv);
 
@@ -574,6 +570,15 @@ sethanguphandler(void (*handler)(int))
 #endif
 #endif /* ?SA_RESTART */
 }
+#else /* NO_SIGNAL */
+/* Stub for WASM builds where signals are not available.
+ * Referenced by various parts of the codebase but never functional. */
+void
+sethanguphandler(void (*handler)(int))
+{
+    /* no-op: signals not supported in WASM */
+    nhUse(handler);
+}
 #endif /* !NO_SIGNAL */
 
 #ifdef PORT_HELP
@@ -807,16 +812,11 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(getPointerValue, "getPointerValue");
     installHelper(setPointerValue, "setPointerValue");
 
-    // used by update_inventory
     function displayInventory() {
-        // Asyncify.handleAsync(async () => {
-            return _repopulate_perminvent();
-        // });
+        return _repopulate_perminvent();
     }
 
-    // convert 'ptr' to the type indicated by 'type'
     function getPointerValue(name, ptr, type) {
-        // console.log("getPointerValue", name, "0x" + ptr.toString(16), type);
         switch(type) {
         case "s": // string
             // var value = UTF8ToString(getValue(ptr, "*"));
@@ -847,9 +847,7 @@ EM_JS(void, js_helpers_init, (), {
         }
     }
 
-    // sets the return value of the function to the type expected
     function setPointerValue(name, ptr, type, value = 0) {
-        // console.log("setPointerValue", name, "0x" + ptr.toString(16), type, value);
         switch (type) {
         case "p":
             setValue(ptr, value, "*");
@@ -857,9 +855,7 @@ EM_JS(void, js_helpers_init, (), {
         case "s":
             if(typeof value !== "string")
                 throw new TypeError(`expected ${name} return type to be string`);
-            // value=value?value:"(no value)";
-            // var strPtr = getValue(ptr, "i32");
-            stringToUTF8(value, ptr, 1024); // TODO: uhh... danger will robinson
+            stringToUTF8(value, ptr, 256);
             break;
         case "i":
             if(typeof value !== "number" || !Number.isInteger(value))
@@ -877,28 +873,20 @@ EM_JS(void, js_helpers_init, (), {
             setValue(ptr, value, "i8");
             break;
         case "f":
-            if(typeof value !== "number" || isFloat(value))
-                throw new TypeError(`expected ${name} return type to be float`);
-            // XXX: I'm not sure why 'double' works and 'float' doesn't
-            setValue(ptr, value, "double");
-            break;
         case "d":
-            if(typeof value !== "number" || isFloat(value))
-                throw new TypeError(`expected ${name} return type to be double`);
+            if(typeof value !== "number")
+                throw new TypeError(`expected ${name} return type to be number`);
             setValue(ptr, value, "double");
             break;
         case "b":
             if (typeof value !== "boolean")
                 throw new TypeError(`expected ${name} return type to be boolean`);
             setValue(ptr, value ? 1 : 0, "i8");
+            break;
         case "v":
             break;
         default:
             throw new Error("unknown type");
-        }
-
-        function isFloat(n){
-            return n === +n && n !== (n|0) && !Number.isInteger(n);
         }
     }
 
@@ -945,14 +933,14 @@ void js_constants_init() {
         globalThis.nethackGlobal.pointers = globalThis.nethackGlobal.pointers || {};
     });
 
-    // create_nhwindow
+    /* create_nhwindow */
     SET_CONSTANT("WIN_TYPE", NHW_MESSAGE)
     SET_CONSTANT("WIN_TYPE", NHW_STATUS)
     SET_CONSTANT("WIN_TYPE", NHW_MAP)
     SET_CONSTANT("WIN_TYPE", NHW_MENU)
     SET_CONSTANT("WIN_TYPE", NHW_TEXT)
 
-    // status_update
+    /* status_update */
     SET_CONSTANT("STATUS_FIELD", BL_CHARACTERISTICS)
     SET_CONSTANT("STATUS_FIELD", BL_RESET)
     SET_CONSTANT("STATUS_FIELD", BL_FLUSH)
@@ -981,7 +969,7 @@ void js_constants_init() {
     SET_CONSTANT("STATUS_FIELD", BL_CONDITION)
     SET_CONSTANT("STATUS_FIELD", MAXBLSTATS)
 
-    // text attributes
+    /* text attributes */
     SET_CONSTANT("ATTR", ATR_NONE);
     SET_CONSTANT("ATTR", ATR_BOLD);
     SET_CONSTANT("ATTR", ATR_DIM);
@@ -991,7 +979,7 @@ void js_constants_init() {
     SET_CONSTANT("ATTR", ATR_URGENT);
     SET_CONSTANT("ATTR", ATR_NOHISTORY);
 
-    // conditions
+    /* conditions */
     SET_CONSTANT("CONDITION", BL_MASK_BAREH);
     SET_CONSTANT("CONDITION", BL_MASK_BLIND);
     SET_CONSTANT("CONDITION", BL_MASK_BUSY);
@@ -1023,18 +1011,18 @@ void js_constants_init() {
     SET_CONSTANT("CONDITION", BL_MASK_WOUNDEDL);
     SET_CONSTANT("CONDITION", BL_MASK_HOLDING);
 
-    // menu
+    /* menu */
     SET_CONSTANT("MENU_SELECT", PICK_NONE);
     SET_CONSTANT("MENU_SELECT", PICK_ONE);
     SET_CONSTANT("MENU_SELECT", PICK_ANY);
 
-    // copyright
+    /* copyright */
     SET_CONSTANT_STRING("COPYRIGHT", COPYRIGHT_BANNER_A);
     SET_CONSTANT_STRING("COPYRIGHT", COPYRIGHT_BANNER_B);
     set_const_str("COPYRIGHT", "COPYRIGHT_BANNER_C", (char*) COPYRIGHT_BANNER_C);
     SET_CONSTANT_STRING("COPYRIGHT", COPYRIGHT_BANNER_D);
 
-    // glyphs
+    /* glyphs */
     SET_CONSTANT("GLYPH", GLYPH_MON_OFF);
     SET_CONSTANT("GLYPH", GLYPH_PET_OFF);
     SET_CONSTANT("GLYPH", GLYPH_INVIS_OFF);
@@ -1056,7 +1044,7 @@ void js_constants_init() {
     SET_CONSTANT("GLYPH", GLYPH_UNEXPLORED);
     SET_CONSTANT("GLYPH", GLYPH_NOTHING);
 
-    // colors
+    /* colors */
     SET_CONSTANT("COLORS", CLR_BLACK);
     SET_CONSTANT("COLORS", CLR_RED);
     SET_CONSTANT("COLORS", CLR_GREEN);
@@ -1075,7 +1063,7 @@ void js_constants_init() {
     SET_CONSTANT("COLORS", CLR_WHITE);
     SET_CONSTANT("COLORS", CLR_MAX);
 
-    // color attributes (?)
+    /* color attributes */
     SET_CONSTANT("COLOR_ATTR", HL_ATTCLR_BOLD);
     SET_CONSTANT("COLOR_ATTR", HL_ATTCLR_DIM);
     SET_CONSTANT("COLOR_ATTR", HL_ATTCLR_ITALIC);
@@ -1211,9 +1199,6 @@ void js_constants_init() {
 void create_global (char *name, void *ptr, char *type);
 
 void js_globals_init() {
-    // int i;
-    // char buf[BUFSZ];
-
     EM_ASM({
         globalThis.nethackGlobal = globalThis.nethackGlobal || {};
         globalThis.nethackGlobal.globals = globalThis.nethackGlobal.globals || {};

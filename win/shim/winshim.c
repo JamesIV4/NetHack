@@ -31,7 +31,6 @@
 /************
  * WASM interface
  ************/
-EMSCRIPTEN_KEEPALIVE
 static char *shim_callback_name = NULL;
 void shim_graphics_set_callback(char *cbName);
 
@@ -115,7 +114,7 @@ void name fn_args { \
 #endif /* __EMSCRIPTEN__ */
 
 VDECLCB(shim_init_nhwindows,(int *argcp, char **argv), "vpp", P2V argcp, P2V argv)
-DECLCB(boolean, shim_player_selection_or_tty,(void), "b")
+DECLCB(boolean, shim_player_selection_cb,(void), "b")
 VDECLCB(shim_askname,(void), "v")
 VDECLCB(shim_get_nh_event,(void), "v")
 VDECLCB(shim_exit_nhwindows,(const char *str), "vs", P2V str)
@@ -181,8 +180,9 @@ void shim_update_inventory(int a1 UNUSED) {
 }
 
 void shim_player_selection() {
-    boolean do_genl_player_setup = shim_player_selection_or_tty();
+    boolean do_genl_player_setup = shim_player_selection_cb();
     if (do_genl_player_setup) {
+        /* 80 = column width for text-mode role/race selection menus */
         genl_player_setup(80);
     }
 }
@@ -277,7 +277,7 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
         let getPointerValue = globalThis.nethackGlobal.helpers.getPointerValue;
         let setPointerValue = globalThis.nethackGlobal.helpers.setPointerValue;
 
-        reentryMutexLock(name);
+        reentryGuardEnter(name);
 
         let argTypes = fmt.split("");
         let retType = argTypes.shift();
@@ -295,11 +295,11 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
         userCallback.call(this, name, ... jsArgs).then((retVal) => {
             // save the return value
             setPointerValue(name, ret_ptr, retType, retVal);
-            reentryMutexUnlock();
+            reentryGuardExit();
             try {
                 wakeUp();
             } catch (e) {
-                
+                console.error("Asyncify wakeUp failed:", e);
             }
         });
 
@@ -307,7 +307,7 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
             return (type === "p") ? getValue(ptr, "*") : getPointerValue(name, getValue(ptr, "*"), type);
         }
 
-        function reentryMutexLock(name) {
+        function reentryGuardEnter(name) {
             globalThis.nethackGlobal = globalThis.nethackGlobal || {};
             if(globalThis.nethackGlobal.shimFunctionRunning) {
                 console.error(`'${name}' attempting second call to 'local_callback' before '${globalThis.nethackGlobal.shimFunctionRunning}' has finished, will crash emscripten Asyncify. For details see: emscripten.org/docs/porting/asyncify.html#reentrancy`);
@@ -315,7 +315,7 @@ EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *r
             globalThis.nethackGlobal.shimFunctionRunning = name;
         }
 
-        function reentryMutexUnlock() {
+        function reentryGuardExit() {
             globalThis.nethackGlobal.shimFunctionRunning = null;
         }
     });
