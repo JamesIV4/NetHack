@@ -811,6 +811,7 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(displayInventory, "displayInventory");
     installHelper(getPointerValue, "getPointerValue");
     installHelper(setPointerValue, "setPointerValue");
+    installHelper(mapGlyphInfoHelper, "mapGlyphInfoHelper");
 
     function displayInventory() {
         return _repopulate_perminvent();
@@ -890,6 +891,27 @@ EM_JS(void, js_helpers_init, (), {
         }
     }
 
+
+    function mapGlyphInfoHelper(glyph, x, y, mgflags) {
+        /* sizeof(glyph_info) = 36 on WASM32 with ENHANCED_SYMBOLS */
+        var ptr = _malloc(36);
+        _map_glyphinfo(x, y, glyph, mgflags || 0, ptr);
+        var result = {
+            glyph:       getValue(ptr +  0, "i32"),
+            ttychar:     getValue(ptr +  4, "i32"),
+            framecolor:  getValue(ptr +  8, "i32"),
+            glyphflags:  getValue(ptr + 12, "i32"),
+            color:       getValue(ptr + 16, "i32"),
+            symidx:      getValue(ptr + 20, "i32"),
+            customcolor: getValue(ptr + 24, "i32"),
+            color256idx: getValue(ptr + 28, "i16"),
+            tileidx:     getValue(ptr + 30, "i16"),
+            x: x, y: y, mgflags: mgflags
+        };
+        result.ch = String.fromCharCode(result.ttychar & 0xFF);
+        _free(ptr);
+        return result;
+    }
 
     function installHelper(fn, name) {
         name = name || fn.name;
