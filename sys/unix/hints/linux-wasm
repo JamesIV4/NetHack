@@ -31,6 +31,7 @@ CFLAGS+=-DNOTTYGRAPHICS -DSHIM_GRAPHICS
 CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
 CFLAGS+=-DCROSS_TO_WASM
 CFLAGS+=-DSCORE_ON_BOTL
+CFLAGS+=-DSELF_RECOVER
 CFLAGS+=-DUSE_TILES
 CFLAGS+=-DSTATUES_LOOK_LIKE_MONSTERS
 
@@ -39,7 +40,9 @@ LFLAGS+=-s ALLOW_TABLE_GROWTH
 LFLAGS+=-s ASYNCIFY -s ASYNCIFY_IMPORTS='["local_callback"]'
 LFLAGS+=-O3
 LFLAGS+=-s MODULARIZE
-LFLAGS+=-s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_malloc", "_free", "_mapglyph", "_glyph_to_tile"]'
+# Export NetHack's internal recovery entry point so browser clients can recover
+# checkpoint shards into a real savefile before resuming.
+LFLAGS+=-s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_malloc", "_free", "_mapglyph", "_glyph_to_tile", "_recover_savefile"]'
 LFLAGS+=-s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "addFunction", "removeFunction", "UTF8ToString", "stringToUTF8", "getValue", "setValue", "ENV", "FS", "IDBFS"]'
 LFLAGS+=-s ERROR_ON_UNDEFINED_SYMBOLS=0
 # ^^^ Required: EM_JS functions (js_helpers_init, create_global, local_callback) are
