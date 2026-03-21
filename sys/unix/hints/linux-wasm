@@ -31,6 +31,7 @@ CFLAGS+=-DNOTTYGRAPHICS -DSHIM_GRAPHICS
 CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
 CFLAGS+=-DCROSS_TO_WASM
 CFLAGS+=-DSCORE_ON_BOTL
+CFLAGS+=-DSELF_RECOVER
 CFLAGS+=-DUSE_TILES
 CFLAGS+=-DSTATUES_LOOK_LIKE_MONSTERS
 
@@ -39,7 +40,9 @@ LFLAGS+=-s ALLOW_TABLE_GROWTH
 LFLAGS+=-s ASYNCIFY -s ASYNCIFY_IMPORTS='["local_callback"]'
 LFLAGS+=-O3
 LFLAGS+=-s MODULARIZE
-LFLAGS+=-s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_malloc", "_free", "_mapglyph", "_glyph_to_tile"]'
+# Export NetHack's internal recovery entry point plus a small host-callable
+# browser bridge compiled in from the wasm package itself.
+LFLAGS+=-s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_malloc", "_free", "_mapglyph", "_glyph_to_tile", "_recover_savefile", "_resume_checkpoint_save"]'
 LFLAGS+=-s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "addFunction", "removeFunction", "UTF8ToString", "stringToUTF8", "getValue", "setValue", "ENV", "FS", "IDBFS"]'
 LFLAGS+=-s ERROR_ON_UNDEFINED_SYMBOLS=0
 # ^^^ Required: EM_JS functions (js_helpers_init, create_global, local_callback) are
@@ -67,8 +70,9 @@ GAME = nethack.js
 # Override SYSSRC and SYSOBJ to use libnhmain.c instead of unixmain.c
 SYSSRC = ../sys/libnh/libnhmain.c \
 	../sys/share/ioctl.c ../sys/share/unixtty.c \
-	../sys/unix/unixunix.c ../sys/unix/unixres.c
-SYSOBJ = libnhmain.o ioctl.o unixtty.o unixunix.o unixres.o
+	../sys/unix/unixunix.c ../sys/unix/unixres.c \
+	../../resume_checkpoint_save.c
+SYSOBJ = libnhmain.o ioctl.o unixtty.o unixunix.o unixres.o resume_checkpoint_save.o
 
 # NOTE: No-op rules for preventing utility rebuilds are NOT included here
 # because the #-POST section is appended to ALL Makefiles (src, util, dat, top).
@@ -76,9 +80,12 @@ SYSOBJ = libnhmain.o ioctl.o unixtty.o unixunix.o unixres.o
 # they prevent the game build from trying to rebuild utilities with emcc.
 
 # Compile rules for source files in non-standard locations.
-Sysunix: libnhmain.o winshim.o
+Sysunix: libnhmain.o winshim.o resume_checkpoint_save.o
 
 libnhmain.o: ../sys/libnh/libnhmain.c $(HACK_H)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+resume_checkpoint_save.o: ../../resume_checkpoint_save.c $(HACK_H)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 winshim.o: ../win/shim/winshim.c $(HACK_H)
