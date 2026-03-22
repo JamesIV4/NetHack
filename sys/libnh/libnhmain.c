@@ -695,7 +695,6 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(tileIndexForGlyph, "tileIndexForGlyph");
     installHelper(glyphAtHelper, "glyphAtHelper");
     installHelper(topItemGlyphUnderPlayer, "topItemGlyphUnderPlayer");
-    installHelper(topItemGlyphUnderPlayerHelper, "topItemGlyphUnderPlayerHelper");
 
     function mapglyphHelper(glyph, x, y, mgflags) {
         let ochar = _malloc(4);
@@ -718,10 +717,6 @@ EM_JS(void, js_helpers_init, (), {
 
     function topItemGlyphUnderPlayer() {
         return _nh_top_item_glyph_under_player();
-    }
-
-    function topItemGlyphUnderPlayerHelper() {
-        return topItemGlyphUnderPlayer();
     }
 
     function tileIndexForGlyph(glyph) {
