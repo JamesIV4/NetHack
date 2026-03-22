@@ -656,6 +656,16 @@ int glyph;
 }
 #endif /* USE_TILES */
 
+/* Return the currently displayed glyph (top-of-pile when visible). */
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+int
+nh3d_glyph_at(int x, int y)
+{
+    return glyph_at((xchar) x, (xchar) y);
+}
+#endif
+
 /***
  * Helpers
  ***/
@@ -667,6 +677,7 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(setPointerValue, "setPointerValue");
     installHelper(mapglyphHelper, "mapglyphHelper");
     installHelper(tileIndexForGlyph, "tileIndexForGlyph");
+    installHelper(glyphAtHelper, "glyphAtHelper");
 
     function mapglyphHelper(glyph, x, y, mgflags) {
         let ochar = _malloc(4);
@@ -680,6 +691,11 @@ EM_JS(void, js_helpers_init, (), {
         _free(ocolor);
         _free(ospecial);
         return { glyph, ch, color, special, tileIdx: _glyph_to_tile(glyph), x, y, mgflags };
+    }
+
+
+    function glyphAtHelper(x, y) {
+        return _nh3d_glyph_at(x, y);
     }
 
     function tileIndexForGlyph(glyph) {
@@ -963,6 +979,7 @@ void js_constants_init() {
  * Globals
  ***/
 #define CREATE_GLOBAL(var, type) create_global(#var, (void *)&var, type);
+#define CREATE_GLOBAL_PATH(name, ptr, type) create_global(name, (void *)(ptr), type);
 
 void create_global (char *name, void *ptr, char *type);
 
@@ -972,8 +989,72 @@ void js_globals_init() {
         globalThis.nethackGlobal.globals = globalThis.nethackGlobal.globals || {};
     });
 
-    /* globals — 3.6 uses direct globals (no svp./gh. prefix) */
+    /* globals - 3.6 uses direct globals (no svp./gh. prefix) */
     CREATE_GLOBAL(plname, "s");
+
+    /* Tombstone / end-of-game globals */
+    CREATE_GLOBAL(done_money, "i");     /* long on wasm32 */
+    CREATE_GLOBAL(killer.format, "i");  /* KILLED_BY / KILLED_BY_AN / NO_KILLER_PREFIX */
+    CREATE_GLOBAL(killer.name, "s");    /* char[BUFSZ] */
+
+    /* Dungeon overview globals (current branch identification) */
+    CREATE_GLOBAL(u.uz.dnum, "0");
+    CREATE_GLOBAL(u.uz.dlevel, "0");
+    CREATE_GLOBAL(dungeon_topology.d_mines_dnum, "0");
+    CREATE_GLOBAL(dungeon_topology.d_quest_dnum, "0");
+    CREATE_GLOBAL(dungeon_topology.d_sokoban_dnum, "0");
+    CREATE_GLOBAL(dungeon_topology.d_tower_dnum, "0");
+    CREATE_GLOBAL(dungeon_topology.d_astral_level.dnum, "0");
+
+    /* Dungeon overview globals (names + depth metadata visible to player) */
+    CREATE_GLOBAL_PATH("dungeons.0.dname", dungeons[0].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.0.ledger_start", &dungeons[0].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.0.depth_start", &dungeons[0].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.1.dname", dungeons[1].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.1.ledger_start", &dungeons[1].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.1.depth_start", &dungeons[1].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.2.dname", dungeons[2].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.2.ledger_start", &dungeons[2].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.2.depth_start", &dungeons[2].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.3.dname", dungeons[3].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.3.ledger_start", &dungeons[3].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.3.depth_start", &dungeons[3].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.4.dname", dungeons[4].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.4.ledger_start", &dungeons[4].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.4.depth_start", &dungeons[4].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.5.dname", dungeons[5].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.5.ledger_start", &dungeons[5].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.5.depth_start", &dungeons[5].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.6.dname", dungeons[6].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.6.ledger_start", &dungeons[6].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.6.depth_start", &dungeons[6].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.7.dname", dungeons[7].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.7.ledger_start", &dungeons[7].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.7.depth_start", &dungeons[7].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.8.dname", dungeons[8].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.8.ledger_start", &dungeons[8].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.8.depth_start", &dungeons[8].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.9.dname", dungeons[9].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.9.ledger_start", &dungeons[9].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.9.depth_start", &dungeons[9].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.10.dname", dungeons[10].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.10.ledger_start", &dungeons[10].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.10.depth_start", &dungeons[10].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.11.dname", dungeons[11].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.11.ledger_start", &dungeons[11].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.11.depth_start", &dungeons[11].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.12.dname", dungeons[12].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.12.ledger_start", &dungeons[12].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.12.depth_start", &dungeons[12].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.13.dname", dungeons[13].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.13.ledger_start", &dungeons[13].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.13.depth_start", &dungeons[13].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.14.dname", dungeons[14].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.14.ledger_start", &dungeons[14].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.14.depth_start", &dungeons[14].depth_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.15.dname", dungeons[15].dname, "s");
+    CREATE_GLOBAL_PATH("dungeons.15.ledger_start", &dungeons[15].ledger_start, "i");
+    CREATE_GLOBAL_PATH("dungeons.15.depth_start", &dungeons[15].depth_start, "i");
 
     /* window globals */
     CREATE_GLOBAL(WIN_MAP, "i");
