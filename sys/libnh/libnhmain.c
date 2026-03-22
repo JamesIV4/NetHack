@@ -674,14 +674,11 @@ nh_top_item_glyph_under_player(void)
     if (Blind)
         return -1;
 
-    item = level.objects[u.ux][u.uy];
-    if (!item)
+    item = vobj_at(u.ux, u.uy);
+    if (!item || covers_objects(u.ux, u.uy))
         return -1;
 
-    if (item->oinvis && !See_invisible)
-        return -1;
-
-    return obj_to_glyph(item);
+    return obj_to_glyph(item, rn2_on_display_rng);
 }
 #endif
 
