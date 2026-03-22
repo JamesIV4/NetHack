@@ -680,6 +680,19 @@ nh_top_item_glyph_under_player(void)
 
     return obj_to_glyph(item, rn2_on_display_rng);
 }
+
+EMSCRIPTEN_KEEPALIVE
+int
+nh_top_item_tile_index_under_player(void)
+{
+    int glyph = nh_top_item_glyph_under_player();
+
+#ifdef USE_TILES
+    if (glyph >= 0)
+        return glyph_to_tile(glyph);
+#endif
+    return -1;
+}
 #endif
 
 /***
@@ -695,6 +708,7 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(tileIndexForGlyph, "tileIndexForGlyph");
     installHelper(glyphAtHelper, "glyphAtHelper");
     installHelper(topItemGlyphUnderPlayer, "topItemGlyphUnderPlayer");
+    installHelper(topItemTileIndexUnderPlayer, "topItemTileIndexUnderPlayer");
 
     function mapglyphHelper(glyph, x, y, mgflags) {
         let ochar = _malloc(4);
@@ -717,6 +731,10 @@ EM_JS(void, js_helpers_init, (), {
 
     function topItemGlyphUnderPlayer() {
         return _nh_top_item_glyph_under_player();
+    }
+
+    function topItemTileIndexUnderPlayer() {
+        return _nh_top_item_tile_index_under_player();
     }
 
     function tileIndexForGlyph(glyph) {
