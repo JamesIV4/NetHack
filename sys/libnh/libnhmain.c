@@ -664,6 +664,25 @@ nh3d_glyph_at(int x, int y)
 {
     return glyph_at((xchar) x, (xchar) y);
 }
+
+EMSCRIPTEN_KEEPALIVE
+int
+nh_top_item_glyph_under_player(void)
+{
+    struct obj *item;
+
+    if (Blind)
+        return -1;
+
+    item = level.objects[u.ux][u.uy];
+    if (!item)
+        return -1;
+
+    if (item->oinvis && !See_invisible)
+        return -1;
+
+    return obj_to_glyph(item);
+}
 #endif
 
 /***
@@ -678,6 +697,8 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(mapglyphHelper, "mapglyphHelper");
     installHelper(tileIndexForGlyph, "tileIndexForGlyph");
     installHelper(glyphAtHelper, "glyphAtHelper");
+    installHelper(topItemGlyphUnderPlayer, "topItemGlyphUnderPlayer");
+    installHelper(topItemGlyphUnderPlayerHelper, "topItemGlyphUnderPlayerHelper");
 
     function mapglyphHelper(glyph, x, y, mgflags) {
         let ochar = _malloc(4);
@@ -696,6 +717,14 @@ EM_JS(void, js_helpers_init, (), {
 
     function glyphAtHelper(x, y) {
         return _nh3d_glyph_at(x, y);
+    }
+
+    function topItemGlyphUnderPlayer() {
+        return _nh_top_item_glyph_under_player();
+    }
+
+    function topItemGlyphUnderPlayerHelper() {
+        return topItemGlyphUnderPlayer();
     }
 
     function tileIndexForGlyph(glyph) {
