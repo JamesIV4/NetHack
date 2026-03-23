@@ -882,7 +882,6 @@ EM_JS(void, js_helpers_init, (), {
             special: info.glyphflags,
             tileIdx: info.tileidx,
             tileidx: info.tileidx,
-            tileId: info.tileidx,
             x: x,
             y: y,
             mgflags: mgflags || 0
@@ -999,7 +998,6 @@ EM_JS(void, js_helpers_init, (), {
         };
         result.ch = String.fromCharCode(result.ttychar & 0xFF);
         result.tileIdx = result.tileidx;
-        result.tileId = result.tileidx;
         _free(ptr);
         return result;
     }
