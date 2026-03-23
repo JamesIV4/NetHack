@@ -801,6 +801,57 @@ after_opt_showpaths(const char *dir)
 }
 
 #ifdef __EMSCRIPTEN__
+/* tile index lookup for glyphs (used by JS helpers) */
+extern glyph_map glyphmap[MAX_GLYPH];
+
+EMSCRIPTEN_KEEPALIVE
+int
+nh3d_tile_index_for_glyph(int glyph)
+{
+    if (glyph < 0 || glyph >= MAX_GLYPH)
+        return -1;
+#ifdef TILES_IN_GLYPHMAP
+    return (int) glyphmap[glyph].tileidx;
+#else
+    return -1;
+#endif
+}
+
+/* Return the currently displayed glyph (top-of-pile when visible). */
+EMSCRIPTEN_KEEPALIVE
+int
+nh3d_glyph_at(int x, int y)
+{
+    return glyph_at((coordxy) x, (coordxy) y);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int
+nh_top_item_glyph_under_player(void)
+{
+    struct obj *item;
+
+    if (Blind)
+        return -1;
+
+    item = vobj_at(u.ux, u.uy);
+    if (!item || covers_objects(u.ux, u.uy))
+        return -1;
+
+    return obj_to_glyph(item, rn2_on_display_rng);
+}
+
+EMSCRIPTEN_KEEPALIVE
+int
+nh_top_item_tile_index_under_player(void)
+{
+    int glyph = nh_top_item_glyph_under_player();
+
+    if (glyph < 0)
+        return -1;
+    return nh3d_tile_index_for_glyph(glyph);
+}
+
 /***
  * Helpers
  ***/
@@ -811,10 +862,47 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(displayInventory, "displayInventory");
     installHelper(getPointerValue, "getPointerValue");
     installHelper(setPointerValue, "setPointerValue");
+    installHelper(mapglyphHelper, "mapglyphHelper");
     installHelper(mapGlyphInfoHelper, "mapGlyphInfoHelper");
+    installHelper(tileIndexForGlyph, "tileIndexForGlyph");
+    installHelper(glyphAtHelper, "glyphAtHelper");
+    installHelper(topItemGlyphUnderPlayer, "topItemGlyphUnderPlayer");
+    installHelper(topItemTileIndexUnderPlayer, "topItemTileIndexUnderPlayer");
 
     function displayInventory() {
         return _repopulate_perminvent();
+    }
+
+    function mapglyphHelper(glyph, x, y, mgflags) {
+        const info = mapGlyphInfoHelper(glyph, x, y, mgflags);
+        return {
+            glyph: info.glyph,
+            ch: info.ch,
+            color: info.color,
+            special: info.glyphflags,
+            tileIdx: info.tileidx,
+            tileidx: info.tileidx,
+            tileId: info.tileidx,
+            x: x,
+            y: y,
+            mgflags: mgflags || 0
+        };
+    }
+
+    function tileIndexForGlyph(glyph) {
+        return _nh3d_tile_index_for_glyph(glyph);
+    }
+
+    function glyphAtHelper(x, y) {
+        return _nh3d_glyph_at(x, y);
+    }
+
+    function topItemGlyphUnderPlayer() {
+        return _nh_top_item_glyph_under_player();
+    }
+
+    function topItemTileIndexUnderPlayer() {
+        return _nh_top_item_tile_index_under_player();
     }
 
     function getPointerValue(name, ptr, type) {
@@ -894,8 +982,9 @@ EM_JS(void, js_helpers_init, (), {
 
     function mapGlyphInfoHelper(glyph, x, y, mgflags) {
         /* sizeof(glyph_info) = 36 on WASM32 with ENHANCED_SYMBOLS */
+        mgflags = mgflags || 0;
         var ptr = _malloc(36);
-        _map_glyphinfo(x, y, glyph, mgflags || 0, ptr);
+        _map_glyphinfo(x, y, glyph, mgflags, ptr);
         var result = {
             glyph:       getValue(ptr +  0, "i32"),
             ttychar:     getValue(ptr +  4, "i32"),
@@ -909,6 +998,8 @@ EM_JS(void, js_helpers_init, (), {
             x: x, y: y, mgflags: mgflags
         };
         result.ch = String.fromCharCode(result.ttychar & 0xFF);
+        result.tileIdx = result.tileidx;
+        result.tileId = result.tileidx;
         _free(ptr);
         return result;
     }
@@ -1212,6 +1303,7 @@ void js_constants_init() {
  * Globals
  ***/
 #define CREATE_GLOBAL(var, type) create_global(#var, (void *)&var, type);
+#define CREATE_GLOBAL_PATH(name, ptr, type) create_global(name, (void *)(ptr), type);
 #define CREATE_GLOBAL_FROM_ARRAY(base, iter, path, end_expr, type) \
     for(iter = 0; end_expr; iter++) { \
         snprintf(buf, BUFSZ, #base ".%d." #path, iter); \
@@ -1221,6 +1313,9 @@ void js_constants_init() {
 void create_global (char *name, void *ptr, char *type);
 
 void js_globals_init() {
+    int iter;
+    char buf[BUFSZ];
+
     EM_ASM({
         globalThis.nethackGlobal = globalThis.nethackGlobal || {};
         globalThis.nethackGlobal.globals = globalThis.nethackGlobal.globals || {};
@@ -1248,6 +1343,34 @@ void js_globals_init() {
     CREATE_GLOBAL(flags.initalign, "i");
     CREATE_GLOBAL(flags.showexp, "b");
     CREATE_GLOBAL(flags.time, "b");
+
+    /* tombstone / end-of-game globals (3.6 compatibility names) */
+    CREATE_GLOBAL_PATH("done_money", &(gd.done_money), "i");
+    CREATE_GLOBAL_PATH("killer.format", &(svk.killer.format), "i");
+    CREATE_GLOBAL_PATH("killer.name", svk.killer.name, "s");
+
+    /* level identity globals expected by external runtimes */
+    CREATE_GLOBAL_PATH("u.uz.dnum", &(u.uz.dnum), "1");
+    CREATE_GLOBAL_PATH("u.uz.dlevel", &(u.uz.dlevel), "1");
+    CREATE_GLOBAL_PATH("dungeon_topology.d_mines_dnum",
+                       &(svd.dungeon_topology.d_mines_dnum), "1");
+    CREATE_GLOBAL_PATH("dungeon_topology.d_quest_dnum",
+                       &(svd.dungeon_topology.d_quest_dnum), "1");
+    CREATE_GLOBAL_PATH("dungeon_topology.d_sokoban_dnum",
+                       &(svd.dungeon_topology.d_sokoban_dnum), "1");
+    CREATE_GLOBAL_PATH("dungeon_topology.d_tower_dnum",
+                       &(svd.dungeon_topology.d_tower_dnum), "1");
+    CREATE_GLOBAL_PATH("dungeon_topology.d_astral_level.dnum",
+                       &(svd.dungeon_topology.d_astral_level.dnum), "1");
+
+    for (iter = 0; iter < MAXDUNGEON; iter++) {
+        snprintf(buf, BUFSZ, "dungeons.%d.dname", iter);
+        create_global(buf, (void *) svd.dungeons[iter].dname, "s");
+        snprintf(buf, BUFSZ, "dungeons.%d.ledger_start", iter);
+        create_global(buf, (void *) &(svd.dungeons[iter].ledger_start), "i");
+        snprintf(buf, BUFSZ, "dungeons.%d.depth_start", iter);
+        create_global(buf, (void *) &(svd.dungeons[iter].depth_start), "i");
+    }
 }
 
 EM_JS(void, create_global, (char *name_str, void *ptr, char *type_str), {
