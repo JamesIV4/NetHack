@@ -345,6 +345,7 @@ WASM_CFLAGS += -DSYSCF -DSYSCF_FILE=\"/sysconf\" -DSECURE
 WASM_CFLAGS += -I../include -DNOTPARMDECL
 # NetHack sources control
 WASM_CFLAGS += -DDLB
+WASM_CFLAGS += -DTILES_IN_GLYPHMAP
 WASM_CFLAGS += -DHACKDIR=\"$(HACKDIR)\"
 WASM_CFLAGS += -DDEFAULT_WINDOW_SYS=\"shim\" \
 #override TARGET_CFLAGS += -DGREPPATH=\"/usr/bin/grep\"
@@ -373,7 +374,7 @@ override WINLIB = emranlib
 override LUALIB=
 override TOPLUALIB=
 override REGEXOBJ = $(TARGETPFX)posixregex.o
-override WINOBJ=
+override WINOBJ= $(TARGETPFX)tile.o
 # don't bother Making regular NetHack executable
 override GAME=
 # the real VARDAT hasn't been defined yet for use in ALLDEP override
