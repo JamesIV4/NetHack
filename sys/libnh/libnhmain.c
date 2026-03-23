@@ -806,7 +806,7 @@ extern glyph_map glyphmap[MAX_GLYPH];
 
 EMSCRIPTEN_KEEPALIVE
 int
-nh3d_tile_index_for_glyph(int glyph)
+glyph_to_tile_index(int glyph)
 {
     if (glyph < 0 || glyph >= MAX_GLYPH)
         return -1;
@@ -820,7 +820,7 @@ nh3d_tile_index_for_glyph(int glyph)
 /* Return the currently displayed glyph (top-of-pile when visible). */
 EMSCRIPTEN_KEEPALIVE
 int
-nh3d_glyph_at(int x, int y)
+glyph_at_position(int x, int y)
 {
     return glyph_at((coordxy) x, (coordxy) y);
 }
@@ -849,7 +849,7 @@ nh_top_item_tile_index_under_player(void)
 
     if (glyph < 0)
         return -1;
-    return nh3d_tile_index_for_glyph(glyph);
+    return glyph_to_tile_index(glyph);
 }
 
 /***
@@ -889,11 +889,11 @@ EM_JS(void, js_helpers_init, (), {
     }
 
     function tileIndexForGlyph(glyph) {
-        return _nh3d_tile_index_for_glyph(glyph);
+        return _glyph_to_tile_index(glyph);
     }
 
     function glyphAtHelper(x, y) {
-        return _nh3d_glyph_at(x, y);
+        return _glyph_at_position(x, y);
     }
 
     function topItemGlyphUnderPlayer() {
