@@ -825,6 +825,16 @@ glyph_at_position(int x, int y)
     return glyph_at((coordxy) x, (coordxy) y);
 }
 
+/* Return underlying terrain/background glyph at map position. */
+EMSCRIPTEN_KEEPALIVE
+int
+floor_glyph_at_position(int x, int y)
+{
+    if (x < 0 || y < 0 || x >= COLNO || y >= ROWNO)
+        return -1;
+    return back_to_glyph((coordxy) x, (coordxy) y);
+}
+
 EMSCRIPTEN_KEEPALIVE
 int
 nh_top_item_glyph_under_player(void)
@@ -866,6 +876,7 @@ EM_JS(void, js_helpers_init, (), {
     installHelper(mapGlyphInfoHelper, "mapGlyphInfoHelper");
     installHelper(tileIndexForGlyph, "tileIndexForGlyph");
     installHelper(glyphAtHelper, "glyphAtHelper");
+    installHelper(floorGlyphAtHelper, "floorGlyphAtHelper");
     installHelper(topItemGlyphUnderPlayer, "topItemGlyphUnderPlayer");
     installHelper(topItemTileIndexUnderPlayer, "topItemTileIndexUnderPlayer");
 
@@ -894,6 +905,10 @@ EM_JS(void, js_helpers_init, (), {
 
     function glyphAtHelper(x, y) {
         return _glyph_at_position(x, y);
+    }
+
+    function floorGlyphAtHelper(x, y) {
+        return _floor_glyph_at_position(x, y);
     }
 
     function topItemGlyphUnderPlayer() {
