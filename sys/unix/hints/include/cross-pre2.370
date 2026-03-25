@@ -350,6 +350,7 @@ WASM_CFLAGS += -DHACKDIR=\"$(HACKDIR)\"
 WASM_CFLAGS += -DDEFAULT_WINDOW_SYS=\"shim\" \
 #override TARGET_CFLAGS += -DGREPPATH=\"/usr/bin/grep\"
 WASM_CFLAGS += -DNOMAIL
+WASM_CFLAGS += -DSELF_RECOVER
 WASM_CFLAGS += $(LUAINCL)
 WASM_CFLAGS += -DNOTTYGRAPHICS -DSHIM_GRAPHICS -DLIBNH
 WASM_CFLAGS += -DCROSSCOMPILE
@@ -500,4 +501,5 @@ endif  # BUILD_TARGET_LUA
 #
 # End of cross-compiling -PRE section
 #===============-=================================================
+
 
