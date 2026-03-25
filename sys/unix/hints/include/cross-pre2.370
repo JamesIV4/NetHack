@@ -282,7 +282,7 @@ EMCC_LFLAGS += -s SUPPORT_LONGJMP=emscripten
 # with ASYNCIFY. Use the JS-based (emscripten) implementation instead.
 EMCC_LFLAGS += -O3
 EMCC_LFLAGS += -s MODULARIZE
-EMCC_LFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_repopulate_perminvent", "_malloc", "_free", "_map_glyphinfo", "_glyph_to_tile_index", "_glyph_at_position", "_nh_top_item_glyph_under_player", "_nh_top_item_tile_index_under_player"]'
+EMCC_LFLAGS += -s EXPORTED_FUNCTIONS='["_main", "_shim_graphics_set_callback", "_repopulate_perminvent", "_malloc", "_free", "_map_glyphinfo", "_glyph_to_tile_index", "_glyph_at_position", "_nh_top_item_glyph_under_player", "_nh_top_item_tile_index_under_player", "_recover_savefile", "_resume_checkpoint_save"]'
 EMCC_LFLAGS += -s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "addFunction", \
 			"removeFunction", "UTF8ToString", "stringToUTF8", "getValue", \
 			"setValue", "ENV", "FS", "IDBFS"]'
@@ -365,11 +365,11 @@ override TARGET_LFLAGS= $(EMCC_LFLAGS)
 override SYSSRC = ../sys/libnh/libnhmain.c \
 		../sys/share/ioctl.c ../sys/share/unixtty.c \
 		../sys/unix/unixunix.c ../sys/unix/unixres.c \
-		../win/shim/winshim.c
+		../win/shim/winshim.c ../resume_checkpoint_save.c
 override SYSOBJ= $(TARGETPFX)libnhmain.o \
 		$(TARGETPFX)ioctl.o $(TARGETPFX)unixtty.o \
 		$(TARGETPFX)unixunix.o $(TARGETPFX)unixres.o \
-		$(TARGETPFX)winshim.o
+		$(TARGETPFX)winshim.o $(TARGETPFX)resume_checkpoint_save.o
 override WINLIB = emranlib
 override LUALIB=
 override TOPLUALIB=
@@ -390,6 +390,9 @@ $(TARGETPFX)%.o : ../sys/unix/%.c
 	$(TARGET_CC) $(TARGET_CFLAGS) -c -o$@ $<
 # Rule for file in sys/libnh
 $(TARGETPFX)%.o : ../sys/libnh/%.c
+	$(TARGET_CC) $(TARGET_CFLAGS) -c -o$@ $<
+# Rule for resume checkpoint bridge in NetHack root
+$(TARGETPFX)resume_checkpoint_save.o : ../resume_checkpoint_save.c $(HACK_H)
 	$(TARGET_CC) $(TARGET_CFLAGS) -c -o$@ $<
 # Rule for files in win/shim
 $(TARGETPFX)%.o : ../win/shim/%.c
@@ -497,3 +500,4 @@ endif  # BUILD_TARGET_LUA
 #
 # End of cross-compiling -PRE section
 #===============-=================================================
+
