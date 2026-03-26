@@ -295,6 +295,9 @@ nhmain(int argc, char *argv[])
                 }
             }
         }
+        if (program_state.in_self_recover) {
+            program_state.in_self_recover = FALSE;
+        }
     }
 
     if (!resuming) {
