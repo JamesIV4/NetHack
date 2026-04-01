@@ -171,11 +171,17 @@ VDECLCB(shim_status_update,
     "vipiiip",
     A2P fldidx, P2V ptr, A2P chg, A2P percent, A2P color, P2V colormasks)
 #ifdef __EMSCRIPTEN__
-/* XXX: calling repopulate_perminvent() from shim_update_inventory() causes reentrancy that breaks emscripten Asyncify */
-/* this should be fine since according to windows.doc, the only purpose of shim_update_inventory() is to call repopulate_perminvent() */
+/* update_inventory is called by the game engine during command processing,
+ * while a shim callback can still be on the Asyncify stack. Calling back into
+ * the browser from here risks Asyncify reentrancy, so queue a non-blocking
+ * notification for delivery by local_callback() instead.
+ */
 void shim_update_inventory(int a1 UNUSED) {
-    if(iflags.perm_invent) {
-        repopulate_perminvent();
+    if (iflags.perm_invent) {
+        EM_ASM({
+            globalThis.nethackGlobal = globalThis.nethackGlobal || {};
+            globalThis.nethackGlobal.pendingInventoryUpdate = true;
+        });
     }
 }
 
@@ -262,6 +268,19 @@ struct window_procs shim_procs = {
 #ifdef __EMSCRIPTEN__
 /* convert the C callback to a JavaScript callback */
 EM_JS(void, local_callback, (const char *cb_name, const char *shim_name, void *ret_ptr, const char *fmt_str, void *args), {
+    /* Dispatch any inventory update that was queued since the last callback.
+     * This runs before handleSleep, so there is no Asyncify stack to re-enter.
+     * The notification Promise is intentionally not awaited.
+     */
+    if (globalThis.nethackGlobal && globalThis.nethackGlobal.pendingInventoryUpdate) {
+        globalThis.nethackGlobal.pendingInventoryUpdate = false;
+        let pendingCbName = UTF8ToString(cb_name);
+        let pendingCb = globalThis[pendingCbName];
+        if (pendingCb) {
+            pendingCb.call(null, 'shim_update_inventory', 0);
+        }
+    }
+
     // Asyncify.handleAsync() is the more logical choice here; however, the stack unrolling in Asyncify is performed by
     // function call analysis during compilation. Since we are using an indirect callback (cb_name), it can't predict the stack
     // unrolling and it crashes. Thus we use Asyncify.handleSleep() and wakeUp() to make sure that async doesn't break
