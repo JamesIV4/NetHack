@@ -1,0 +1,12 @@
+# No-op rules to prevent src/Makefile from rebuilding native utilities with emcc.
+# Written by build-wasm.sh; included by src/Makefile via -include directive.
+../util/makedefs: ;
+../util/lev_comp: ;
+../util/dgn_comp: ;
+../util/dlb: ;
+../include/onames.h: ;
+../include/pm.h: ;
+../include/vis_tab.h: ;
+vis_tab.c: ;
+../include/date.h: ;
+tile.c: ;
