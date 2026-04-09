@@ -21,6 +21,7 @@ STATIC_DCL void FDECL(missmu, (struct monst *, BOOLEAN_P, struct attack *));
 STATIC_DCL void FDECL(mswings, (struct monst *, struct obj *));
 STATIC_DCL void FDECL(wildmiss, (struct monst *, struct attack *));
 STATIC_DCL void FDECL(hitmsg, (struct monst *, struct attack *));
+extern void FDECL(nh3d_note_monster_attack, (struct monst *, struct monst *));
 
 /* See comment in mhitm.c.  If we use this a lot it probably should be */
 /* changed to a parameter to mhitu. */
@@ -2360,6 +2361,8 @@ mdamageu(mtmp, n)
 struct monst *mtmp;
 int n;
 {
+    if (n > 0)
+        nh3d_note_monster_attack(mtmp, (struct monst *) 0);
     context.botl = 1;
     if (Upolyd) {
         u.mh -= n;

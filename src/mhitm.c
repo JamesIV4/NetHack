@@ -14,6 +14,9 @@ static NEARDATA struct obj *otmp;
 
 static const char brief_feeling[] =
     "have a %s feeling for a moment, then it passes.";
+extern void FDECL(nh3d_note_monster_attack, (struct monst *, struct monst *));
+extern void FDECL(nh3d_push_monster_killer, (struct monst *));
+extern void NDECL(nh3d_pop_monster_killer);
 
 STATIC_DCL int FDECL(hitmm, (struct monst *, struct monst *,
                              struct attack *));
@@ -1453,6 +1456,8 @@ register struct attack *mattk;
     if (!tmp)
         return res;
 
+    if (tmp > 0)
+        nh3d_note_monster_attack(magr, mdef);
     if ((mdef->mhp -= tmp) < 1) {
         if (m_at(mdef->mx, mdef->my) == magr) { /* see gulpmm() */
             remove_monster(mdef->mx, mdef->my);
@@ -1460,7 +1465,9 @@ register struct attack *mattk;
             place_monster(mdef, mdef->mx, mdef->my);
             mdef->mhp = 0;
         }
+        nh3d_push_monster_killer(magr);
         monkilled(mdef, "", (int) mattk->adtyp);
+        nh3d_pop_monster_killer();
         if (!DEADMONSTER(mdef))
             return res; /* mdef lifesaved */
         else if (res == MM_AGR_DIED)
@@ -1725,9 +1732,13 @@ int mdead;
     else
         tmp = 0;
 
- assess_dmg:
+assess_dmg:
+    if (tmp > 0)
+        nh3d_note_monster_attack(mdef, magr);
     if ((magr->mhp -= tmp) <= 0) {
+        nh3d_push_monster_killer(mdef);
         monkilled(magr, "", (int) mddat->mattk[i].adtyp);
+        nh3d_pop_monster_killer();
         return (mdead | mhit | MM_AGR_DIED);
     }
     return (mdead | mhit);

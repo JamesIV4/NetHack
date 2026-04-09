@@ -31,6 +31,8 @@ STATIC_DCL void FDECL(lifesaved_monster, (struct monst *));
 STATIC_DCL void FDECL(migrate_mon, (struct monst *, XCHAR_P, XCHAR_P));
 STATIC_DCL boolean FDECL(ok_to_obliterate, (struct monst *));
 STATIC_DCL void FDECL(deal_with_overcrowding, (struct monst *));
+extern int NDECL(nh3d_get_current_monster_killer_id);
+extern void FDECL(nh3d_emit_monster_killed, (int, int, int, int));
 
 /* note: duplicated in dog.c */
 #define LEVEL_SPECIFIC_NOCORPSE(mdat) \
@@ -2274,6 +2276,11 @@ const char *fltxt;
 int how;
 {
     boolean be_sad = FALSE; /* true if unseen pet is killed */
+    boolean was_visible = (boolean) ((mdef == u.usteed) || canspotmon(mdef));
+    int killed_monster_id = mdef->m_id ? (int) mdef->m_id : -1;
+    int killer_id = nh3d_get_current_monster_killer_id();
+    int kill_x = (mdef == u.usteed) ? u.ux : mdef->mx;
+    int kill_y = (mdef == u.usteed) ? u.uy : mdef->my;
 
     if ((mdef->wormno ? worm_known(mdef) : cansee(mdef->mx, mdef->my))
         && fltxt)
@@ -2290,6 +2297,8 @@ int how;
     else
         mondied(mdef);
 
+    if (was_visible && DEADMONSTER(mdef))
+        nh3d_emit_monster_killed(killed_monster_id, killer_id, kill_x, kill_y);
     if (be_sad && DEADMONSTER(mdef))
         You("have a sad feeling for a moment, then it passes.");
 }
@@ -2339,6 +2348,10 @@ int xkill_flags; /* 1: suppress message, 2: suppress corpse, 4: pacifist */
             nomsg = (xkill_flags & XKILL_NOMSG) != 0,
             nocorpse = (xkill_flags & XKILL_NOCORPSE) != 0,
             noconduct = (xkill_flags & XKILL_NOCONDUCT) != 0;
+    boolean was_visible = (boolean) ((mtmp == u.usteed) || canspotmon(mtmp));
+    int killed_monster_id = mtmp->m_id ? (int) mtmp->m_id : -1;
+    int kill_x = (mtmp == u.usteed) ? u.ux : x;
+    int kill_y = (mtmp == u.usteed) ? u.uy : y;
 
     mtmp->mhp = 0; /* caller will usually have already done this */
     if (!noconduct) /* KMH, conduct */
@@ -2403,6 +2416,8 @@ int xkill_flags; /* 1: suppress message, 2: suppress corpse, 4: pacifist */
         return;
     }
 
+    if (was_visible)
+        nh3d_emit_monster_killed(killed_monster_id, 0, kill_x, kill_y);
     mdat = mtmp->data; /* note: mondead can change mtmp->data */
     mndx = monsndx(mdat);
 
