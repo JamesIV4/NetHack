@@ -37,6 +37,8 @@ staticfn int wiz_force_cham_form(struct monst *);
 staticfn struct permonst *accept_newcham_form(struct monst *, int);
 staticfn void kill_eggs(struct obj *) NO_NNARGS;
 staticfn void pacify_guard(struct monst *);
+extern int nh3d_get_current_monster_killer_id(void);
+extern void nh3d_emit_monster_killed(int, int, int, int);
 
 extern const struct shclass shtypes[]; /* defined in shknam.c */
 
@@ -3375,6 +3377,11 @@ monkilled(
     int how)
 {
     struct permonst *mptr = mdef->data;
+    boolean was_visible = (boolean) ((mdef == u.usteed) || canspotmon(mdef));
+    int killed_monster_id = mdef->m_id ? (int) mdef->m_id : -1;
+    int killer_id = nh3d_get_current_monster_killer_id();
+    int kill_x = (mdef == u.usteed) ? u.ux : mdef->mx;
+    int kill_y = (mdef == u.usteed) ? u.uy : mdef->my;
 
     if (fltxt && (mdef->wormno ? worm_known(mdef)
                                : cansee(mdef->mx, mdef->my)))
@@ -3397,6 +3404,8 @@ monkilled(
     else
         mondied(mdef); /* calls mondead() and maybe leaves a corpse */
 
+    if (DEADMONSTER(mdef) && was_visible)
+        nh3d_emit_monster_killed(killed_monster_id, killer_id, kill_x, kill_y);
     if (!DEADMONSTER(mdef))
         return; /* life-saved */
     /* extra message if pet golem is completely destroyed;
@@ -3484,6 +3493,10 @@ xkilled(
             nomsg = (xkill_flags & XKILL_NOMSG) != 0,
             nocorpse = (xkill_flags & XKILL_NOCORPSE) != 0,
             noconduct = (xkill_flags & XKILL_NOCONDUCT) != 0;
+    boolean was_visible = (boolean) ((mtmp == u.usteed) || canspotmon(mtmp));
+    int killed_monster_id = mtmp->m_id ? (int) mtmp->m_id : -1;
+    int kill_x = (mtmp == u.usteed) ? u.ux : x;
+    int kill_y = (mtmp == u.usteed) ? u.uy : y;
 
     /* potential pet message; always clear global flag */
     be_sad = iflags.sad_feeling;
@@ -3554,6 +3567,8 @@ xkilled(
         return;
     }
 
+    if (was_visible)
+        nh3d_emit_monster_killed(killed_monster_id, 0, kill_x, kill_y);
     if (be_sad)
         You("have a sad feeling for a moment, then it passes.");
 

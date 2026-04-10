@@ -21,6 +21,7 @@ staticfn void mayberem(struct monst *, const char *, struct obj *,
                      const char *);
 staticfn int assess_dmg(struct monst *, int);
 staticfn int passiveum(struct permonst *, struct monst *, struct attack *);
+extern void nh3d_note_monster_attack(struct monst *, struct monst *);
 
 #define ld() ((yyyymmdd((time_t) 0) - (getyear() * 10000L)) == 0xe5)
 
@@ -1898,6 +1899,8 @@ mdamageu(struct monst *mtmp, int n)
         n = 0;
     }
 
+    if (n > 0)
+        nh3d_note_monster_attack(mtmp, (struct monst *) 0);
     disp.botl = TRUE;
     if (Upolyd) {
         u.mh -= n;

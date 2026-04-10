@@ -8,6 +8,9 @@
 
 static const char brief_feeling[] =
     "have a %s feeling for a moment, then it passes.";
+extern void nh3d_note_monster_attack(struct monst *, struct monst *);
+extern void nh3d_push_monster_killer(struct monst *);
+extern void nh3d_pop_monster_killer(void);
 
 staticfn void noises(struct monst *, struct attack *);
 staticfn void pre_mm_attack(struct monst *, struct monst *);
@@ -1070,6 +1073,8 @@ mdamagem(
     if (!mhm.damage)
         return mhm.hitflags;
 
+    if (mhm.damage > 0)
+        nh3d_note_monster_attack(magr, mdef);
     mdef->mhp -= mhm.damage;
     if (mdef->mhp < 1) {
         if (m_at(mdef->mx, mdef->my) == magr) { /* see gulpmm() */
@@ -1085,7 +1090,9 @@ mdamagem(
                          || mattk->aatyp == AT_CLAW
                          || mattk->aatyp == AT_BITE)
                      && zombie_form(mdef->data) != NON_PM);
+        nh3d_push_monster_killer(magr);
         monkilled(mdef, "", (int) mattk->adtyp);
+        nh3d_pop_monster_killer();
         gz.zombify = FALSE; /* reset */
         gm.mkcorpstat_norevive = FALSE;
         if (!DEADMONSTER(mdef))
@@ -1449,8 +1456,12 @@ passivemm(
         tmp = 0;
 
  assess_dmg:
+    if (tmp > 0)
+        nh3d_note_monster_attack(mdef, magr);
     if ((magr->mhp -= tmp) <= 0) {
+        nh3d_push_monster_killer(mdef);
         monkilled(magr, "", (int) mddat->mattk[i].adtyp);
+        nh3d_pop_monster_killer();
         return (mdead | mhit | M_ATTK_AGR_DIED);
     }
     return (mdead | mhit);
