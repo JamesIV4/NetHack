@@ -64,6 +64,8 @@ int glyph;
 
     if (glyph_is_ridden_monster(glyph) && u.usteed && x == u.ux && y == u.uy)
         return (int) u.usteed->m_id;
+    if (x == u.ux && y == u.uy)
+        return NH3D_TRACKED_PLAYER_ID;
     if (!glyph_is_monster(glyph))
         return NH3D_TRACKED_MONSTER_NONE;
 
