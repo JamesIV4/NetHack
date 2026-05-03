@@ -1,4 +1,4 @@
-/* NetHack 3.7	mhitu.c	$NHDT-Date: 1762750699 2025/11/09 20:58:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.334 $ */
+/* NetHack 5.0	mhitu.c	$NHDT-Date: 1775259433 2026/04/03 15:37:13 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.341 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -12,13 +12,13 @@ staticfn void missmu(struct monst *, boolean, struct attack *);
 staticfn void mswings(struct monst *, struct obj *, boolean);
 staticfn void wildmiss(struct monst *, struct attack *);
 staticfn void calc_mattacku_vars(struct monst *, boolean *, boolean *,
-                               boolean *, boolean *);
+                                 boolean *, boolean *);
 staticfn void summonmu(struct monst *, boolean);
 staticfn int hitmu(struct monst *, struct attack *);
 staticfn int gulpmu(struct monst *, struct attack *);
 staticfn int explmu(struct monst *, struct attack *, boolean);
 staticfn void mayberem(struct monst *, const char *, struct obj *,
-                     const char *);
+                       const char *);
 staticfn int assess_dmg(struct monst *, int);
 staticfn int passiveum(struct permonst *, struct monst *, struct attack *);
 extern void nh3d_note_monster_attack(struct monst *, struct monst *);
@@ -95,7 +95,7 @@ missmu(struct monst *mtmp, boolean nearmiss, struct attack *mattk)
         pline_mon(mtmp, "%s pretends to be friendly.", Monnam(mtmp));
     else
         pline_mon(mtmp, "%s %smisses!", Monnam(mtmp),
-              (nearmiss && flags.verbose) ? "just " : "");
+                  (nearmiss && flags.verbose) ? "just " : "");
 
     stop_occupation();
 }
@@ -143,7 +143,9 @@ mswings(
 
 /* return how a poison attack was delivered */
 const char *
-mpoisons_subj(struct monst *mtmp, struct attack *mattk)
+mpoisons_subj(
+    struct monst *mtmp,
+    struct attack *mattk)
 {
     if (mattk->aatyp == AT_WEAP) {
         struct obj *mwep = (mtmp == &gy.youmonst) ? uwep : MON_WEP(mtmp);
@@ -211,9 +213,9 @@ wildmiss(struct monst *mtmp, struct attack *mattk)
                                   || nolimbs(mtmp->data)) ? "lunges"
                                  : "swings";
 
-        if (compat)
+        if (compat) {
             pline("%s tries to touch you and misses!", Monst_name);
-        else
+        } else {
             switch (rn2(3)) {
             case 0:
                 pline("%s %s wildly and misses!", Monst_name, swings);
@@ -231,7 +233,7 @@ wildmiss(struct monst *mtmp, struct attack *mattk)
                 pline("%s %s wildly!", Monst_name, swings);
                 break;
             }
-
+        }
     } else if (unotthere) { /* Displaced */
         /* give 'displaced' message even if hero is Blind */
         if (compat)
@@ -900,7 +902,8 @@ mattacku(struct monst *mtmp)
                     mon_currwep = MON_WEP(mtmp);
                     if (mon_currwep) {
                         boolean bash = (is_pole(mon_currwep)
-                                        && !is_art(mon_currwep, ART_SNICKERSNEE)
+                                        && !is_art(mon_currwep,
+                                                   ART_SNICKERSNEE)
                                         && m_next2u(mtmp));
 
                         hittmp = hitval(mon_currwep, &gy.youmonst);
@@ -1042,7 +1045,9 @@ diseasemu(struct permonst *mdat)
 
 /* check whether slippery clothing protects from hug or wrap attack */
 boolean
-u_slip_free(struct monst *mtmp, struct attack *mattk)
+u_slip_free(
+    struct monst *mtmp,
+    struct attack *mattk)
 {
     struct obj *obj;
 
@@ -1308,7 +1313,7 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
         place_monster(mtmp, u.ux, u.uy);
         set_ustuck(mtmp);
         newsym(mtmp->mx, mtmp->my);
-        /* 3.7: dismount for all engulfers, not just for purple worms */
+        /* 5.0: dismount for all engulfers, not just for purple worms */
         if (u.usteed) {
             char buf[BUFSZ];
 
@@ -1584,7 +1589,10 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
 
 /* monster explodes in your face */
 staticfn int
-explmu(struct monst *mtmp, struct attack *mattk, boolean ufound)
+explmu(
+    struct monst *mtmp,
+    struct attack *mattk,
+    boolean ufound)
 {
     boolean kill_agr = TRUE;
     boolean not_affected;
@@ -1911,7 +1919,6 @@ mdamageu(struct monst *mtmp, int n)
         if (u.mh < 1)
             rehumanize();
     } else {
-        n = saving_grace(n);
         u.uhp -= n;
         showdamage(n);
         /* caller might have reduced uhpmax before calling mdamageu() */
@@ -2366,9 +2373,10 @@ assess_dmg(struct monst *mtmp, int tmp)
    callback (optional). Callback returns 0 if the attack is
    active */
 
-boolean ranged_attk_assessed(
-struct monst *mtmp,
-boolean (*assessfunc)(struct monst *, int))
+boolean
+ranged_attk_assessed(
+    struct monst *mtmp,
+    boolean (*assessfunc)(struct monst *, int))
 {
     int i;
     struct permonst *ptr = mtmp->data;
@@ -2385,7 +2393,9 @@ boolean (*assessfunc)(struct monst *, int))
 /* can be used as ranged_attk_assessed() callback.
    Returns TRUE if monster is avoiding use of this attack */
 boolean
-mon_avoiding_this_attack(struct monst *mtmp, int attkidx)
+mon_avoiding_this_attack(
+    struct monst *mtmp,
+    int attkidx)
 {
     struct permonst *ptr = mtmp->data;
     int typ = -1;
@@ -2629,5 +2639,7 @@ cloneu(void)
     disp.botl = TRUE;
     return mon;
 }
+
+#undef ld
 
 /*mhitu.c*/

@@ -1,4 +1,4 @@
-/* NetHack 3.7	dogmove.c	$NHDT-Date: 1725733007 2024/09/07 18:16:47 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.156 $ */
+/* NetHack 5.0	dogmove.c	$NHDT-Date: 1725733007 2024/09/07 18:16:47 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.156 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -313,12 +313,19 @@ dog_eat(struct monst *mtmp,
         /* It's a reward if it's DOGFOOD and the player dropped/threw it.
            We know the player had it if invlet is set. -dlc */
         if (dogfood(mtmp, obj) == DOGFOOD && obj->invlet) {
+            int prior_apport = edog->apport;
+
             edog->apport += (int) (200L / ((long) edog->dropdist + svm.moves
                                            - edog->droptime));
             if (edog->apport <= 0) {
-                impossible("dog_eat: pet apport <= 0 (%d, %d, %ld, %ld)",
+                impossible("dog_eat: pet apport <= 0 (%d, %d, %ld, %ld, %d, %u, %u)",
                             edog->apport, edog->dropdist, edog->droptime,
-                            svm.moves);
+                            svm.moves,
+                            prior_apport,
+                           /* check whether edog struct got clobbered;
+                              these two values should always match if
+                              edog content is still intact */
+                           mtmp->m_id, edog->parentmid);
                 edog->apport = 1;
             }
         }

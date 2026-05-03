@@ -1,4 +1,4 @@
-/* NetHack 3.7	end.c	$NHDT-Date: 1720397752 2024/07/08 00:15:52 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.315 $ */
+/* NetHack 5.0	end.c	$NHDT-Date: 1720397752 2024/07/08 00:15:52 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.315 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -8,9 +8,6 @@
 #include "hack.h"
 #ifndef NO_SIGNAL
 #include <signal.h>
-#endif
-#ifndef LONG_MAX
-#include <limits.h>
 #endif
 #include "dlb.h"
 
@@ -479,7 +476,8 @@ staticfn boolean
 should_query_disclose_option(int category, char *defquery)
 {
     int idx;
-    char disclose, *dop;
+    char disclose;
+    const char *dop;
 
     *defquery = 'n';
     if ((dop = strchr(disclosure_options, category)) != 0) {
@@ -1678,7 +1676,7 @@ nh_terminate(int status)
     program_state.in_moveloop = 0; /* won't be returning to normal play */
 
     l_nhcore_call(NHCORE_GAME_EXIT);
-#ifdef MAC
+#ifdef MACOS9
     getreturn("to exit");
 #endif
     /* don't bother to try to release memory if we're in panic mode, to
@@ -1765,7 +1763,7 @@ save_killers(NHFILE *nhfp)
 
     if (update_file(nhfp)) {
         for (kptr = &svk.killer; kptr; kptr = kptr->next) {
-	    Sfo_kinfo(nhfp, kptr, "kinfo");
+            Sfo_kinfo(nhfp, kptr, "kinfo");
         }
     }
     if (release_data(nhfp)) {

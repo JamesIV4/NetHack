@@ -1,4 +1,4 @@
-/* NetHack 3.7	potion.c	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.279 $ */
+/* NetHack 5.0	potion.c	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.279 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -582,7 +582,7 @@ dodrink(void)
      * was no longer dealing with an inventory item.  Unwearing
      * the current potion is intended to keep it in inventory.]
      *
-     * 3.7: switch back to relying on useup() unless the object is
+     * 5.0: switch back to relying on useup() unless the object is
      * actually worn.  Otherwise drinking a stack of unpaid potions
      * one by one in a shop makes each one a separate used-up item
      * for 'Ix' invent display and for itemized shop billing instead
@@ -841,6 +841,7 @@ staticfn void
 peffect_see_invisible(struct obj *otmp)
 {
     int msg = Invisible && !Blind;
+    int permchance = 10 - (HInvis ? 3 : 0) - (HSee_invisible ? 6 : 0);
 
     gp.potion_unkn++;
     if (otmp->cursed)
@@ -863,7 +864,7 @@ peffect_see_invisible(struct obj *otmp)
          */
         make_blinded(0L, TRUE);
     }
-    if (otmp->blessed)
+    if (otmp->blessed && !rn2(permchance))
         HSee_invisible |= FROMOUTSIDE;
     else
         incr_itimeout(&HSee_invisible, rn1(100, 750));
