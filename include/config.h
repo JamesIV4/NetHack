@@ -176,8 +176,8 @@
  *              SUPPORT      (how to get local support) [no default]
  *              RECOVER      (how to recover a game at your site) [no default]
  *            For the record file (see topten.c):
- *              PERSMAX      (max entries for one person)
- *              ENTRYMAX     (max entries in the record file)
+ *              PERSMAX      (max entries for one person, 0 means unlimited)
+ *              ENTRYMAX     (max entries in the record file, 0 means unlimited)
  *              POINTSMIN    (min points to get an entry)
  *              PERS_IS_UID  (0 or 1 - person is name or (numeric) userid)
  *            Can force incubi/succubi behavior to be toned down to nymph-like:
@@ -232,6 +232,7 @@
  *      They used to be located in topten.c rather than config.h, and
  *      their values can be overridden at runtime (to increase ENTRYMAX, the
  *      maximum number of scores to keep, for example) if SYSCF is enabled.
+ *      A PERSMAX or ENTRYMAX value of 0 disables that limit.
  */
 #ifndef PERSMAX
 #define PERSMAX 3 /* entries per name/uid per char. allowed */

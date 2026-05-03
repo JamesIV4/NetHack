@@ -2514,8 +2514,9 @@ char *origbuf;
         sysopt.maxplayers = n;
     } else if (src == SET_IN_SYS && match_varname(buf, "PERSMAX", 7)) {
         n = atoi(bufp);
-        if (n < 1) {
-            config_error_add("Illegal value in PERSMAX (minimum is 1).");
+        if (n < 0) {
+            config_error_add(
+                "Illegal value in PERSMAX (0 means unlimited, minimum is 0).");
             return FALSE;
         }
         sysopt.persmax = n;
@@ -2528,8 +2529,9 @@ char *origbuf;
         sysopt.pers_is_uid = n;
     } else if (src == SET_IN_SYS && match_varname(buf, "ENTRYMAX", 8)) {
         n = atoi(bufp);
-        if (n < 10) {
-            config_error_add("Illegal value in ENTRYMAX (minimum is 10).");
+        if (n != 0 && n < 10) {
+            config_error_add(
+                "Illegal value in ENTRYMAX (0 means unlimited, minimum is 10).");
             return FALSE;
         }
         sysopt.entrymax = n;

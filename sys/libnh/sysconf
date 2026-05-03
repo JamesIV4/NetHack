@@ -16,7 +16,10 @@ GENERICUSERS=play player game games nethack nethacker
 # Maximum simultaneous games
 MAXPLAYERS=0
 
+# Keep every eligible score in the browser-backed record file.
+PERSMAX=0
+ENTRYMAX=0
+
 # Disable panic tracing (not available in WASM)
 PANICTRACE_GDB=0
 PANICTRACE_LIBC=0
-

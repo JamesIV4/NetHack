@@ -50,9 +50,11 @@ sys_early_init()
     sysopt.tt_oname_maxrank = 10;
 
     /* sanity checks */
-    if (PERSMAX < 1)
-        sysopt.persmax = 1;
-    if (ENTRYMAX < 10)
+    if (PERSMAX < 0)
+        sysopt.persmax = 0;
+    if (ENTRYMAX < 0)
+        sysopt.entrymax = 0;
+    else if (ENTRYMAX > 0 && ENTRYMAX < 10)
         sysopt.entrymax = 10;
     if (POINTSMIN < 1)
         sysopt.pointsmin = 1;

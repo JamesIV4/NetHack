@@ -488,6 +488,8 @@ time_t when;
 {
     int uid = getuid();
     int rank, rank0 = -1, rank1 = 0;
+    boolean unlimited_entries = (sysopt.entrymax <= 0);
+    boolean unlimited_personal_entries = (sysopt.persmax <= 0);
     int occ_cnt = sysopt.persmax;
     register struct toptenentry *t0, *tprev;
     struct toptenentry *t1;
@@ -645,8 +647,9 @@ time_t when;
 
         if (t1->points == 0)
             break;
-        if ((sysopt.pers_is_uid ? t1->uid == t0->uid
-                                : strncmp(t1->name, t0->name, NAMSZ) == 0)
+        if (!unlimited_personal_entries
+            && (sysopt.pers_is_uid ? t1->uid == t0->uid
+                                   : strncmp(t1->name, t0->name, NAMSZ) == 0)
             && !strncmp(t1->plrole, t0->plrole, ROLESZ) && --occ_cnt <= 0) {
             if (rank0 < 0) {
                 rank0 = 0;
@@ -666,12 +669,12 @@ time_t when;
                 continue;
             }
         }
-        if (rank <= sysopt.entrymax) {
+        if (unlimited_entries || rank <= sysopt.entrymax) {
             t1->tt_next = newttentry();
             t1 = t1->tt_next;
             rank++;
         }
-        if (rank > sysopt.entrymax) {
+        if (!unlimited_entries && rank > sysopt.entrymax) {
             t1->points = 0;
             break;
         }
@@ -696,9 +699,13 @@ time_t when;
                 } else {
                     char pbuf[BUFSZ];
 
-                    Sprintf(pbuf,
-                            "You reached the %d%s place on the top %d list.",
-                            rank0, ordin(rank0), sysopt.entrymax);
+                    if (unlimited_entries)
+                        Sprintf(pbuf, "You reached the %d%s place on the score list.",
+                                rank0, ordin(rank0));
+                    else
+                        Sprintf(pbuf,
+                                "You reached the %d%s place on the top %d list.",
+                                rank0, ordin(rank0), sysopt.entrymax);
                     topten_print(pbuf);
                 }
                 topten_print("");
