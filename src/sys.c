@@ -63,8 +63,9 @@ sys_early_init(void)
     sysopt.livelog = LL_NONE;
 
     /* record file */
-    sysopt.persmax = max(PERSMAX, 1);
-    sysopt.entrymax = max(ENTRYMAX, 10);
+    sysopt.persmax = (PERSMAX < 0) ? 0 : PERSMAX;
+    sysopt.entrymax =
+        (ENTRYMAX < 0) ? 0 : ((ENTRYMAX > 0 && ENTRYMAX < 10) ? 10 : ENTRYMAX);
     sysopt.pointsmin = max(POINTSMIN, 1);
     sysopt.pers_is_uid = PERS_IS_UID;
     sysopt.tt_oname_maxrank = 10;

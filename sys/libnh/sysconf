@@ -51,6 +51,10 @@ GENERICUSERS=play player game games nethack nethacker ec2-user
 # letter and "lock" (eg. alock, block, ...)
 MAXPLAYERS=0
 
+# Keep every eligible score in the browser-backed record file.
+PERSMAX=0
+ENTRYMAX=0
+
 # If not null, added to string "To get local support, " in the support
 # information help.
 #SUPPORT=call Izchak at extension 42.

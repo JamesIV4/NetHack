@@ -970,8 +970,9 @@ cnf_line_PERSMAX(char *bufp)
 {
     int n = atoi(bufp);
 
-    if (n < 1) {
-        config_error_add("Illegal value in PERSMAX (minimum is 1)");
+    if (n < 0) {
+        config_error_add(
+            "Illegal value in PERSMAX (0 means unlimited, minimum is 0)");
         n = 0;
     }
     sysopt.persmax = n;
@@ -996,8 +997,9 @@ cnf_line_ENTRYMAX(char *bufp)
 {
     int n = atoi(bufp);
 
-    if (n < 10) {
-        config_error_add("Illegal value in ENTRYMAX (minimum is 10)");
+    if (n != 0 && n < 10) {
+        config_error_add(
+            "Illegal value in ENTRYMAX (0 means unlimited, minimum is 10)");
         n = 10;
     }
     sysopt.entrymax = n;
@@ -2073,4 +2075,3 @@ assure_syscf_file(void)
 /* ----------  END CONFIG FILE HANDLING ----------- */
 
 /*cfgfiles.c*/
-
