@@ -1,4 +1,4 @@
-/* NetHack 5.0	wintty.c	$NHDT-Date: 1737691300 2025/01/23 20:01:40 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.420 $ */
+/* NetHack 5.0	wintty.c	$NHDT-Date: 1781973100 2026/06/20 16:31:40 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.438 $ */
 /* Copyright (c) David Cohrs, 1991                                */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -20,7 +20,7 @@
 /* leave this undefined; it produces bad screen output with rxvt-unicode */
 /*#define DECgraphicsOptimization*/
 
-#ifdef MACOS9
+#ifdef MAC68K
 #define MICRO /* The Mac is a MICRO only for this file, not in general! */
 #ifdef THINK_C
 extern void msmsg(const char *, ...);
@@ -143,7 +143,7 @@ struct window_procs tty_procs = {
     tty_getlin, tty_get_ext_cmd, tty_number_pad, tty_delay_output,
 #ifdef CHANGE_COLOR /* the Mac uses a palette device */
     tty_change_color,
-#ifdef MACOS9
+#ifdef MAC68K
     tty_change_background, set_tty_font_name,
 #endif
     tty_get_color_string,
@@ -182,7 +182,7 @@ static const char winpanicstr[] = "Bad window Id %d (%s)";
 char defmorestr[] = "--More--";
 
 #ifdef CLIPPING
-#if defined(TILES_IN_GLYPHMAP) && defined(MSDOS)
+#if (defined(TILES_IN_GLYPHMAP) || defined(ENHANCED_SYMBOLS)) && defined(MSDOS)
 boolean clipping = FALSE; /* clipping on? */
 int clipx = 0, clipxmax = 0;
 int clipy = 0, clipymax = 0;
@@ -193,7 +193,7 @@ static int clipy = 0, clipymax = 0;
 #endif
 #endif /* CLIPPING */
 
-#if defined(TILES_IN_GLYPHMAP) && defined(MSDOS)
+#if defined(NO_TERMS) && defined(MSDOS)
 extern void adjust_cursor_flags(struct WinDesc *);
 #endif
 
@@ -766,6 +766,8 @@ getret(void)
 #if defined(MICRO) || defined(WIN32CON)
     getreturn("to continue");
 #else
+    if (!isatty(STDIN_FILENO) || program_state.early_options)
+        return;
     HUPSKIP();
     xputs("\n");
     if (flags.standout)
@@ -2070,7 +2072,7 @@ tty_curs(
 
     print_vt_code2(AVTC_SELECT_WINDOW, window);
 
-#if defined(TILES_IN_GLYPHMAP) && defined(MSDOS)
+#if defined(NO_TERMS) && defined(MSDOS)
     adjust_cursor_flags(cw);
 #endif
 
@@ -3895,18 +3897,17 @@ tty_print_glyph(
             if (ttyDisplay->color != NO_COLOR)
                 term_end_color();
         }
-        /* we don't link with termcap.o if NO_TERMS is defined */
-        if ((tty_procs.wincap2 & WC2_EXTRACOLORS)
-            && glyphinfo->gm.customcolor != 0
-            && iflags.colorcount >= 256
+        if (glyphinfo->gm.customcolor != 0
             && !calling_from_update_inventory) {
-            if ((glyphinfo->gm.customcolor & NH_BASIC_COLOR) == 0) {
+            if ((glyphinfo->gm.customcolor & NH_BASIC_COLOR) != 0) {
+                /* NH_BASIC_COLOR */
+                color = COLORVAL(glyphinfo->gm.customcolor);
+            } else if ((tty_procs.wincap2 & WC2_EXTRACOLORS)
+                       && iflags.colorcount >= 256) {
                 term_start_extracolor(glyphinfo->gm.customcolor,
                                       glyphinfo->gm.color256idx);
                 ttyDisplay->colorflags = 0;
                 colordone = TRUE;
-            } else {
-                color = COLORVAL(glyphinfo->gm.customcolor);
             }
         }
         if (!colordone) {

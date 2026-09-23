@@ -134,6 +134,8 @@ override TARGET_CC = $(TOOLTOP1)/i586-pc-msdosdjgpp-gcc
 override TARGET_CXX = $(TOOLTOP1)/i586-pc-msdosdjgpp-g++
 override TARGET_AR = $(TOOLTOP1)/i586-pc-msdosdjgpp-gcc-ar
 override TARGET_STUBEDIT = ../lib/djgpp/i586-pc-msdosdjgpp/bin/stubedit
+override GENTILEOFILE = $(TARGETPFX)tile.o
+override UUIDOBJ =
 ifdef MAKEFILE_SRC
 FLDR=../
 endif
@@ -175,8 +177,31 @@ MSDOS_GPP_CFLAGS = -Wall -Wextra -Wno-missing-field-initializers -Wreturn-type \
 	-Wunused -Wformat -Wswitch -Wshadow -Wwrite-strings -pedantic \
 	-Wmissing-declarations -Wformat-nonliteral -Wunreachable-code \
 	-Wno-maybe-uninitialized
+ifndef WANT_WIN_TTY
+    # A Curses-only configuration
+    MSDOS_GRAPH_CONFIG = -DNOTTYGRAPHICS
+    SKIP_TILES = 1
+    ifndef WANT_DOSVGA
+        SKIP_FONTS = 1
+    endif
+    SKIP_FONT_C = 1
+else ifdef NO_GRAPHICS
+    MSDOS_GRAPH_CONFIG = -DSUPPRESS_GRAPHICS
+    # Curses will need the fonts, but not font.c
+    ifndef WANT_DOSVGA
+        SKIP_FONTS = 1
+    endif
+    SKIP_FONT_C = 1
+    SKIP_TILES = 1
+else ifdef NO_TILES
+    MSDOS_GRAPH_CONFIG =
+    # without SKIP_FONT_C; if ENHANCED_SYMBOLS is set, we'll need the fonts
+    SKIP_TILES = 1
+else
+    MSDOS_GRAPH_CONFIG = -DTILES_IN_GLYPHMAP
+endif
 MSDOS_TARGET_CFLAGS = -c -O $(DBGFLAGS) -I../include -I../sys/msdos -I../win/share \
-	$(LUAINCL) -DDLB $(PDCURSESDEF) -DTILES_IN_GLYPHMAP \
+	$(LUAINCL) -DDLB $(PDCURSESDEF) $(MSDOS_GRAPH_CONFIG) \
 	-DCROSSCOMPILE -DCROSSCOMPILE_TARGET -DCROSS_TO_MSDOS \
 	-D_NAIVE_DOS_REGS \
 	$(MSDOS_GCC_CFLAGS) $(SNDCFLAGS)
@@ -188,7 +213,11 @@ MSDOS_TARGET_CXXFLAGS = -c -O $(DBGFLAGS) -I../include -I../sys/msdos -I../win/s
 PDCINCL += -I$(PDCPORT)
 PDC_TARGET_CFLAGS = $(MSDOS_TARGET_CFLAGS) -Wno-unused-parameter \
 			-Wno-missing-prototypes
-ifndef SKIP_FONTS_IN_CI
+ifdef SKIP_FONTS_IN_CI
+FONTTARGETS=
+else ifdef SKIP_FONTS
+FONTTARGETS=
+else
 FONTVER = terminus-font-4.49.1
 FONTTOP = ../lib/$(FONTVER)
 DOSFONT = ../sys/msdos/fonts
@@ -196,8 +225,6 @@ FONTTARGETS = $(DOSFONT)/ter-u16b.psf $(DOSFONT)/ter-u16v.psf \
 		$(DOSFONT)/ter-u18b.psf $(DOSFONT)/ter-u20b.psf \
 		$(DOSFONT)/ter-u22b.psf $(DOSFONT)/ter-u24b.psf \
 		$(DOSFONT)/ter-u28b.psf $(DOSFONT)/ter-u32b.psf
-else
-FONTTARGETS=
 endif
 LUABIN = ../lib/lua-$(LUA_VERSION)/src/lua
 LUA_TARGET_CFLAGS = $(MSDOS_TARGET_CFLAGS)
@@ -214,22 +241,27 @@ override SYSSRC = ../sys/share/pcmain.c ../sys/msdos/msdos.c \
 		../sys/share/pcsys.c ../sys/share/pctty.c \
 		../sys/share/pcunix.c ../sys/msdos/video.c \
 		../sys/msdos/vidtxt.c ../sys/msdos/pckeys.c \
-		../sys/msdos/vidvga.c ../sys/msdos/vidvesa.c \
-		../sys/msdos/font.c \
-		../win/share/bmptiles.c ../win/share/giftiles.c \
-		../win/share/tileset.c
+		../sys/msdos/vidvga.c ../sys/msdos/vidvesa.c
 override SYSOBJ= $(TARGETPFX)pcmain.o $(TARGETPFX)msdos.o \
 		$(TARGETPFX)pcsys.o $(TARGETPFX)pctty.o \
 		$(TARGETPFX)pcunix.o $(TARGETPFX)video.o \
 		$(TARGETPFX)vidtxt.o $(TARGETPFX)pckeys.o \
-		$(TARGETPFX)vidvga.o $(TARGETPFX)vidvesa.o \
-		$(TARGETPFX)font.o \
-		$(TARGETPFX)bmptiles.o $(TARGETPFX)giftiles.o \
-		$(TARGETPFX)tileset.o $(TARGETPFX)tile.o
+		$(TARGETPFX)vidvga.o $(TARGETPFX)vidvesa.o
+ifndef SKIP_FONT_C
+override SYSSRC += ../sys/msdos/font.c
+override SYSOBJ += $(TARGETPFX)font.o
+endif
+ifndef SKIP_TILES
+override SYSSRC += ../win/share/bmptiles.c ../win/share/giftiles.c \
+		../win/share/tileset.c
+override SYSOBJ += $(TARGETPFX)bmptiles.o $(TARGETPFX)giftiles.o \
+		$(TARGETPFX)tileset.o
+endif
 override WINLIB=
 override LUALIB=
 override LUALIBS=
-override TOPLUALIB=
+override LUATOPLIB=
+override WINX11OBJ=
 override GAMEBIN = $(TARGETPFX)nethack.exe
 override RECOVERBIN = $(TARGETPFX)recover.exe
 override SFCTOOLBIN = $(TARGETPFX)sfctool.exe
@@ -247,7 +279,12 @@ GDBEXE=
 GDBBAT=
 GDBCMDLINE=
 endif
+ifndef SKIP_TILES
 VARDATND += nhtiles.bmp
+NHTILES = ../dat/nhtiles.bmp
+else
+NHTILES =
+endif
 #
 ifdef WANT_WIN_CURSES
 # rules for pdcurses dos-specific files
@@ -258,6 +295,11 @@ endif  # WANT_WIN_CURSES
 # Rule for files in sys/msdos
 $(TARGETPFX)%.o : ../sys/msdos/%.c
 	$(TARGET_CC) $(TARGET_CFLAGS) -o$@ $<
+#
+# Rule for files in util
+$(TARGETPFX)%.o : ../util/%.c
+	$(TARGET_CC) $(TARGET_CFLAGS) -o$@ $<
+
 endif  # CROSS_TO_MSDOS
 #=================================================================
 
@@ -267,6 +309,7 @@ ifdef CROSS_TO_WASM
 # WASM
 # originally from https://github.com/NetHack/NetHack/pull/385
 #===============-=================================================
+#also set a make variable flagging this as a crosscompile
 #
 #WASM_DEBUG = 1
 WASM_DATA_DIR = $(TARGETPFX)wasm-data
@@ -341,8 +384,8 @@ WASM_CFLAGS += -Wshadow
 # Nethack C flags
 WASM_CFLAGS += $(WINCFLAGS)   #WINCFLAGS set from multiw-2.500
 WASM_CFLAGS += -DSYSCF -DSYSCF_FILE=\"/sysconf\" -DSECURE -DNHUUID
-#WASM_CFLAGS += -g -I../include -DNOTPARMDECL
-WASM_CFLAGS += -I../include -DNOTPARMDECL
+#WASM_CFLAGS += -g -I../include
+WASM_CFLAGS += -I../include
 # NetHack sources control
 WASM_CFLAGS += -DDLB
 WASM_CFLAGS += -DTILES_IN_GLYPHMAP
@@ -373,9 +416,10 @@ override SYSOBJ= $(TARGETPFX)libnhmain.o \
 		$(TARGETPFX)winshim.o $(TARGETPFX)resume_checkpoint_save.o
 override WINLIB = emranlib
 override LUALIB=
-override TOPLUALIB=
+override LUATOPLIB=
 override REGEXOBJ = $(TARGETPFX)posixregex.o
 override WINOBJ= $(TARGETPFX)tile.o
+override UUIDOBJ=
 # don't bother Making regular NetHack executable
 override GAME=
 # the real VARDAT hasn't been defined yet for use in ALLDEP override
@@ -458,7 +502,7 @@ override SYSOBJ = $(TARGETPFX)ioctl.o $(TARGETPFX)unixmain.o $(TARGETPFX)unixtty
 override WINLIB = $(NCURSESLIB)
 override LUALIB=
 override LUALIBS=
-override TOPLUALIB=
+override LUATOPLIB=
 override GAMEBIN=$(MIPS_TARGET)
 override RECOVERBIN = $(TARGETPFX)recover
 override PACKAGE = mipspkg
@@ -517,6 +561,7 @@ override TARGET_CFLAGS = -c -O2 -noixemul $(TOOLARCH) \
 	-DCROSSCOMPILE -DCROSSCOMPILE_TARGET -DCROSS_TO_AMIGA \
 	-DAMIGA_VERSION_STRING=\""VER: NetHack 5.0.0"\"
 override TARGET_CXXFLAGS = $(TARGET_CFLAGS)
+override GENTILEOFILE = $(TARGETPFX)tile.o
 LUA_TARGET_CFLAGS = $(TARGET_CFLAGS)
 ifeq "$(REGEXOBJ)" "$(TARGETPFX)cppregex.o"
 override TARGET_LINK = $(TARGET_CXX)
@@ -526,9 +571,9 @@ endif
 override TARGET_LFLAGS= $(TOOLARCH) -noixemul -Wl,--allow-multiple-definition
 override TARGET_LIBS += $(LIBLM)
 VARDATND += nhtiles.bmp
-override SYSSRC = ../sys/amiga/amidos.c ../sys/amiga/amigst.c \
+override SYSSRC = ../sys/amiga/amidos.c \
 		../sys/amiga/amimenu.c ../sys/amiga/amirip.c \
-		../sys/amiga/amistack.c ../sys/amiga/amitty.c \
+		../sys/amiga/amistack.c \
 		../sys/amiga/amiwind.c ../sys/amiga/clipwin.c \
 		../sys/amiga/colorwin.c \
 		../sys/amiga/winami.c ../sys/amiga/winchar.c \
@@ -537,9 +582,9 @@ override SYSSRC = ../sys/amiga/amidos.c ../sys/amiga/amigst.c \
 		../sys/amiga/winstr.c ../sys/share/pcmain.c \
 		../win/share/bmptiles.c ../win/share/giftiles.c \
 		../win/share/tileset.c
-override SYSOBJ = $(TARGETPFX)amidos.o $(TARGETPFX)amigst.o \
+override SYSOBJ = $(TARGETPFX)amidos.o \
 		$(TARGETPFX)amirip.o $(TARGETPFX)amistack.o \
-		$(TARGETPFX)amitty.o $(TARGETPFX)amiwind.o \
+		$(TARGETPFX)amiwind.o \
 		$(TARGETPFX)winami.o $(TARGETPFX)winchar.o \
 		$(TARGETPFX)winfuncs.o $(TARGETPFX)winkey.o \
 		$(TARGETPFX)winamenu.o $(TARGETPFX)winreq.o \
@@ -550,7 +595,7 @@ override SYSOBJ = $(TARGETPFX)amidos.o $(TARGETPFX)amigst.o \
 override WINLIB=
 override LUALIB=
 override LUALIBS=
-override TOPLUALIB=
+override LUATOPLIB=
 override DLLIB=
 override WINOBJ=
 override GAMEBIN = $(TARGETPFX)nethack

@@ -1,4 +1,4 @@
-/* NetHack 5.0	end.c	$NHDT-Date: 1720397752 2024/07/08 00:15:52 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.315 $ */
+/* NetHack 5.0	end.c	$NHDT-Date: 1781973048 2026/06/20 16:30:48 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.349 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -110,9 +110,12 @@ done2(void)
             u.usleep = 0;
         }
 
-        if (abandon_tutorial)
+        if (abandon_tutorial) {
+            /* mention_decor can be processed now */
+            rcfile_only_this_option(opt_mention_decor);
             schedule_goto(&u.ucamefrom, UTOTYPE_ATSTAIRS,
                           "Resuming regular play.", (char *) 0);
+        }
         return ECMD_OK;
     }
 
@@ -1676,9 +1679,6 @@ nh_terminate(int status)
     program_state.in_moveloop = 0; /* won't be returning to normal play */
 
     l_nhcore_call(NHCORE_GAME_EXIT);
-#ifdef MACOS9
-    getreturn("to exit");
-#endif
     /* don't bother to try to release memory if we're in panic mode, to
        avoid trouble in case that happens to be due to memory problems */
     if (!program_state.panicking) {
@@ -1893,7 +1893,7 @@ build_english_list(char *in)
 # endif
 
 void
-NH_abort(char *why USED_FOR_CRASHREPORT)
+NH_abort(const char *why USED_FOR_CRASHREPORT)
 {
 #ifdef PANICTRACE
     int gdb_prio = SYSOPT_PANICTRACE_GDB;
@@ -1909,7 +1909,7 @@ NH_abort(char *why USED_FOR_CRASHREPORT)
 
 #ifdef PANICTRACE
 #ifdef CRASHREPORT
-    if(!submit_web_report(1, "Panic", why))
+    if (!submit_web_report(1, "Panic", why))
 #endif
     {
 #ifndef VMS

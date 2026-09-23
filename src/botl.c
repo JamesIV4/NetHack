@@ -1,4 +1,4 @@
-/* NetHack 5.0	botl.c	$NHDT-Date: 1769839231 2026/01/30 22:00:31 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.277 $ */
+/* NetHack 5.0	botl.c	$NHDT-Date: 1781973042 2026/06/20 16:30:42 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.286 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2006. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -714,7 +714,7 @@ static struct istat_s initblstats[MAXBLSTATS] = {
     INIT_BLSTAT("gold", " %s", ANY_LONG, 40, BL_GOLD),
     INIT_BLSTATP("power", " Pw:%s", ANY_INT, 10, BL_ENEMAX, BL_ENE),
     INIT_BLSTAT("power-max", "(%s)", ANY_INT, 10, BL_ENEMAX),
-    INIT_BLSTATP("experience-level", " Xp:%s", ANY_INT, 10, BL_EXP, BL_XP),
+    INIT_BLSTATP("experience-level", " Xp:%s", ANY_INT, 10, BL_XP, BL_XP),
     INIT_BLSTAT("armor-class", " AC:%s", ANY_INT, 10, BL_AC),
     INIT_BLSTAT("HD", " HD:%s", ANY_INT, 10, BL_HD),
     INIT_BLSTAT("time", " T:%s", ANY_LONG, 30, BL_TIME),
@@ -4539,9 +4539,13 @@ status_hilite_menu(void)
 #endif
         any = cg.zeroany;
         any.a_int = fld + 1;
-        Sprintf(buf, "%-18s", initblstats[i].fldname);
+        if (iflags.menu_tab_sep) {
+            Sprintf(buf, "%s\t", initblstats[i].fldname);
+        } else {
+            Sprintf(buf, "%-18s ", initblstats[i].fldname);
+        }
         if (count)
-            Sprintf(eos(buf), " (%d defined)", count);
+            Sprintf(eos(buf), "(%d defined)", count);
         add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
                  clr, buf, MENU_ITEMFLAGS_NONE);
     }

@@ -1,4 +1,4 @@
-/* NetHack 5.0	mswproc.c	$NHDT-Date: 1717967341 2024/06/09 21:09:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.193 $ */
+/* NetHack 5.0	mswproc.c	$NHDT-Date: 1781973107 2026/06/20 16:31:47 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.208 $ */
 /* Copyright (C) 2001 by Alex Kompel */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -883,7 +883,8 @@ mswin_display_nhwindow(winid wid, boolean block)
             } else {
                 if ((GetNHApp()->windowlist[wid].type == NHW_MAP)
                     || (GetNHApp()->windowlist[wid].type == NHW_MESSAGE)) {
-                    (void) mswin_nhgetch();
+                    if (!program_state.savefile_completed)
+                        (void) mswin_nhgetch();
                 }
             }
         }
@@ -2067,6 +2068,11 @@ mswin_preference_update(const char *pref)
     }
 
     if (stricmp(pref, "hilite_pet") == 0) {
+        InvalidateRect(mswin_hwnd_from_winid(WIN_MAP), NULL, TRUE);
+        return;
+    }
+
+    if (stricmp(pref, "hilite_pile") == 0) {
         InvalidateRect(mswin_hwnd_from_winid(WIN_MAP), NULL, TRUE);
         return;
     }

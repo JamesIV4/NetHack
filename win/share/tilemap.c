@@ -1,4 +1,4 @@
-/* NetHack 5.0	tilemap.c	$NHDT-Date: 1737720923 2025/01/24 04:15:23 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.87 $ */
+/* NetHack 5.0	tilemap.c	$NHDT-Date: 1781973099 2026/06/20 16:31:39 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.93 $ */
 /*      Copyright (c) 2016 by Michael Allison                     */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -101,9 +101,9 @@ const char *zap_texts[] = {
     "death",   "lightning", "poison gas", "acid",
 };
 
-enum tilesrc { monsters_file, objects_file, other_file, generated };
+enum tilesrc { monsters_file, objects_file, other_file, generated, decals_file };
 const char *tilesrc_texts[] = {
-    "monsters.txt", "objects.txt", "other.txt", "generated",
+    "monsters.txt", "objects.txt", "other.txt", "generated", "decals.txt"
 };
 
 struct tilemap_t {
@@ -129,7 +129,11 @@ struct tiles_used *tilelist[2500] = { 0 };
 int TILE_stone = 0,       /* will get set to correct tile later */
     TILE_unexplored = 0,  /* will get set to correct tile later */
     TILE_nothing = 0,     /* will get set to correct tile later */
-    TILE_corr = 0;        /* will get set to correct tile later; X11 uses it */
+    TILE_corr = 0,        /* will get set to correct tile later; X11 uses it */
+    TILE_delimiter = 0,   /* reference tile to indicate the two below exist */
+    TILE_petmark = 0,     /* tile to overlay on another tile to mark pet */
+    TILE_pilemark = 0,    /* tile to overlay on another tile to mark piletop */
+    TILE_very_last_tile = 0;
 
 /* prototypes for functions in this file */
 const char *tilename(int, const int, int);
@@ -195,6 +199,7 @@ tilename(int set, const int file_entry, int gend UNUSED)
 {
     int i, k, cmap, condnum, tilenum;
     static char buf[BUFSZ];
+    boolean decal_flag = FALSE;
 #if 0
     int offset, gendnum;
 #endif
@@ -203,6 +208,10 @@ tilename(int set, const int file_entry, int gend UNUSED)
     tilenum = 0;
 
     buf[0] = '\0';
+    if (set == 3)
+        set = MON_GLYPH;
+    else if (set == 4)
+        decal_flag = TRUE;
     if (set == MON_GLYPH) {
         for (i = 0; i < NUMMONS; i++) {
             if (tilenum == file_entry) {
@@ -530,9 +539,28 @@ tilename(int set, const int file_entry, int gend UNUSED)
             }
         }
     } /* OTH_GLYPH */
+    if (decal_flag) {
+        tilenum = 0; /* set-relative number */
+        for (i = 0; i < 3; i++) {
+            if (tilenum == file_entry)
+                switch(i) {
+                    case 0:
+                        return "decal_delimiter";
+                        break;
+                    case 1:
+                        return "decal_pet";
+                        break;
+                    case 2:
+                        return "decal_pile";
+                        break;
+                }
+            tilenum++;
+        }
+    } /* DECALS */
     Sprintf(buf, "unknown %d %d", set, file_entry);
-    return buf;
+    return buf; 
 }
+
 #endif /* TILETEXT || OBTAIN_TILEMAP */
 
 #ifndef TILETEXT
@@ -541,7 +569,7 @@ tilename(int set, const int file_entry, int gend UNUSED)
 #define SOURCE_TEMPLATE "NH:src/%s"
 #define INCLUDE_TEMPLATE "NH:include/t.%s"
 #else
-#ifdef MACOS9
+#ifdef MAC68K
 #define SOURCE_TEMPLATE ":src:%s"
 #define INCLUDE_TEMPLATE ":include:%s"
 #else
@@ -558,6 +586,8 @@ int lastmontile, lastobjtile, lastothtile;
 
 /* Number of tiles for invisible monsters */
 #define NUM_INVIS_TILES 1
+
+#define TILEMAPPINGS_LST "tilemappings.lst"
 
 /*
  * set up array to map glyph numbers to tile numbers
@@ -578,7 +608,11 @@ init_tilemap(void)
     int file_entry = 0;
 
 #if defined(OBTAIN_TILEMAP)
-    tilemap_file = fopen("tilemappings.lst", "w");
+    tilemap_file = fopen(TILEMAPPINGS_LST, "w");
+    if (!tilemap_file) {
+        Fprintf(stderr, "ERROR: Cannot write to file %s.", TILEMAPPINGS_LST);
+        return;
+    }
     Fprintf(tilemap_file, "NUMMONS = %d\n", NUMMONS);
     Fprintf(tilemap_file, "NUM_OBJECTS = %d\n", NUM_OBJECTS);
     Fprintf(tilemap_file, "MAXEXPCHARS = %d\n", MAXEXPCHARS);
@@ -1282,16 +1316,31 @@ init_tilemap(void)
         tilenum++;
         file_entry++;
     }
+    laststatuetile = tilenum - 1;
+#endif /* STATUES_DONT_LOOK_LIKE_MONSTERS */
     /* go beyond NUMMONS to cover off the invisible tile at the
        end of monsters.txt so that the tile mapping matches things
        in the .bmp file (for example) */
-    file_entry = 0;
 #if defined(OBTAIN_TILEMAP)
-    add_tileref(tilenum, NO_GLYPH, monsters_file, file_entry,
+    file_entry = 0;
+    add_tileref(tilenum, NO_GLYPH, generated, file_entry,
                 "invisible statue", "");
 #endif
-    laststatuetile = tilenum - 1;
-#endif /* STATUES_DONT_LOOK_LIKE_MONSTERS */
+    tilenum++;
+
+    file_entry = 0;
+    TILE_delimiter = tilenum++;   /* Used to init nul_glyphinfo tileidx entry */
+    TILE_petmark = tilenum++;
+    TILE_pilemark = tilenum++;
+#if defined(OBTAIN_TILEMAP)
+    add_tileref(TILE_delimiter, NO_GLYPH, decals_file, file_entry++,
+                "decal_delimiter","");
+    add_tileref(TILE_petmark, NO_GLYPH, decals_file, file_entry++,
+                "decal_petmark","");
+    add_tileref(TILE_pilemark, NO_GLYPH, decals_file, file_entry++,
+                "decal_pilemark","");
+#endif
+    TILE_very_last_tile = tilenum;
 
 #if defined(OBTAIN_TILEMAP)
     for (i = 0; i < MAX_GLYPH; ++i) {
@@ -1347,12 +1396,18 @@ main(int argc, char *argv[])
     Fprintf(ofp, "\nenum special_tiles {\n");
     Fprintf(ofp, "    TILE_CORR = %d,\n", TILE_corr); 
     Fprintf(ofp, "    TILE_STONE = %d,\n", TILE_stone); 
-    Fprintf(ofp, "    TILE_UNEXPLORED = %d\n", TILE_unexplored);
+    Fprintf(ofp, "    TILE_UNEXPLORED = %d,\n", TILE_unexplored);
+    Fprintf(ofp, "    TILE_DELIMITER = %d,\n", TILE_delimiter);
+    Fprintf(ofp, "    TILE_PETMARK = %d,\n", TILE_petmark);
+    Fprintf(ofp, "    TILE_PILEMARK = %d\n", TILE_pilemark);
     Fprintf(ofp, "};\n");
-    Fprintf(ofp, "\nint total_tiles_used = %d,\n", laststatuetile + 1);
+    Fprintf(ofp, "\nint total_tiles_used = %d,\n", TILE_very_last_tile);
     Fprintf(ofp, "%sTile_corr = TILE_CORR,\n", indent); /* X11 uses it */
-    Fprintf(ofp, "%sTile_stone = TILE_STONE,\n",  indent);
-    Fprintf(ofp, "%sTile_unexplored = TILE_UNEXPLORED,\n",  indent);
+    Fprintf(ofp, "%sTile_stone = TILE_STONE,\n", indent);
+    Fprintf(ofp, "%sTile_unexplored = TILE_UNEXPLORED,\n", indent);
+    Fprintf(ofp, "%sTile_delimiter = TILE_DELIMITER,\n", indent);
+    Fprintf(ofp, "%sTile_petmark = TILE_PETMARK,\n", indent);
+    Fprintf(ofp, "%sTile_pilemark = TILE_PILEMARK,\n", indent);
     Fprintf(ofp, "%smaxmontile = %d,\n", indent, lastmontile);
     Fprintf(ofp, "%smaxobjtile = %d,\n", indent, lastobjtile);
     Fprintf(ofp, "%smaxothtile = %d;\n\n", indent, lastothtile);

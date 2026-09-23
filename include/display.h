@@ -1,4 +1,4 @@
-/* NetHack 5.0	display.h	$NHDT-Date: 1725653008 2024/09/06 20:03:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.106 $ */
+/* NetHack 5.0	display.h	$NHDT-Date: 1781973079 2026/06/20 16:31:19 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.118 $ */
 /* Copyright (c) Dean Luick, with acknowledgements to Kevin Darcy */
 /* and Dave Cohrs, 1990.                                          */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -846,7 +846,7 @@ enum glyph_offsets {
      || glyph_is_piletop_generic_obj(glyph))
 #define glyph_is_normal_piletop_obj(glyph) \
     ((glyph) == GLYPH_OBJ_PILETOP_OFF                           \
-     || ((glyph) > GLYPH_OBJ_PILETOP_OFF + FIRST_OBJECT - 1     \
+     || ((glyph) >= GLYPH_OBJ_PILETOP_OFF + FIRST_OBJECT - 1    \
          && (glyph) < (GLYPH_OBJ_PILETOP_OFF + NUM_OBJECTS)))
 #define glyph_is_normal_object(glyph) \
     ((glyph) == GLYPH_OBJ_OFF                                   \

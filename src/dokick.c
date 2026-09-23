@@ -1,4 +1,4 @@
-/* NetHack 5.0	dokick.c	$NHDT-Date: 1712453347 2024/04/07 01:29:07 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.223 $ */
+/* NetHack 5.0	dokick.c	$NHDT-Date: 1781973046 2026/06/20 16:30:46 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.237 $ */
 /* Copyright (c) Izchak Miller, Mike Stephenson, Steve Linhart, 1989. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1137,7 +1137,9 @@ kick_nondoor(coordxy x, coordxy y, int avrg_attrib)
 
         /* nothing, fruit or trouble? 75:23.5:1.5% */
         if (rn2(3)) {
-            if (!rn2(6) && !(svm.mvitals[PM_KILLER_BEE].mvflags & G_GONE))
+            if (!rn2(6)
+                && !(svm.mvitals[PM_KILLER_BEE].mvflags & G_GONE)
+                && !(gm.maploc->looted & TREE_SWARM))
                 You_hear("a low buzzing."); /* a warning */
             kick_ouch(x, y, "");
             return ECMD_TIME;

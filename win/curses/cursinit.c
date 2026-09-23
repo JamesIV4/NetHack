@@ -7,6 +7,7 @@
 #include "hack.h"
 #include "wincurs.h"
 #include "cursinit.h"
+#include "cursmisc.h"
 
 /* Initialization and startup functions for curses interface */
 
@@ -334,18 +335,18 @@ curses_init_nhcolors(void)
     /* COLOR_foo + 8 means COLOR | A_BOLD when COLORS < 16 */
     /* otherwise assume the terminal has least 16 different colors */
     /* these map to the NetHack CLR_ defines */
-    static const int fg_clr[16] = {
+    static const int basic_fg_clr[16] = {
         COLOR_BLACK, COLOR_RED, COLOR_GREEN, COLOR_YELLOW,
         COLOR_BLUE,  COLOR_MAGENTA, COLOR_CYAN, COLOR_WHITE,
         -1, COLOR_RED + 8, COLOR_GREEN + 8, COLOR_YELLOW + 8,
         COLOR_BLUE + 8, COLOR_MAGENTA + 8, COLOR_CYAN + 8, COLOR_WHITE + 8
     };
-    static const int bg_clr[8] = {
+    static const int bg_clr[CURSES_NUM_BACKGROUND_COLORS] = {
         -1, COLOR_RED, COLOR_GREEN, COLOR_YELLOW,
         COLOR_BLUE, COLOR_MAGENTA, COLOR_CYAN, COLOR_WHITE
     };
     int bg, nhclr;
-    int maxc = (COLORS >= 16) ? 16 : 8;
+    int maxc = curses_has_256color() ? 256 : (COLORS >= 16) ? 16 : 8;
 
     if (!has_colors())
         return;
@@ -353,8 +354,9 @@ curses_init_nhcolors(void)
     use_default_colors();
 
     for (nhclr = CLR_BLACK; nhclr < maxc; nhclr++) {
-        for (bg = 0; bg < 8; bg++) {
-            init_pair((maxc * bg) + nhclr + 1, fg_clr[nhclr], bg_clr[bg]);
+        for (bg = 0; bg < CURSES_NUM_BACKGROUND_COLORS; bg++) {
+            int fg_color = (nhclr < 16) ? basic_fg_clr[nhclr] : nhclr;
+            init_pair((maxc * bg) + nhclr + 1, fg_color, bg_clr[bg]);
         }
     }
 
@@ -744,6 +746,12 @@ curses_character_dialog(const char **choices, const char *prompt)
 void
 curses_init_options(void)
 {
+#ifdef PDCURSES
+    int display_height = 0, display_width = 0;
+#if defined(WIN32) && !defined(WIN32CON)
+    int alt_display_height = 0, alt_display_width = 0;
+#endif
+#endif
     /* change these from set_gameview to set_in_game */
     set_wc_option_mod_status(WC_ALIGN_MESSAGE | WC_ALIGN_STATUS, set_in_game);
 
@@ -761,11 +769,18 @@ curses_init_options(void)
        terminal size programmatically.  If the user does not specify a
        size in the config file, we will set it to a nice big 32x110 to
        take advantage of some of the nice features of this windowport. */
-    if (iflags.wc2_term_cols == 0)
-        iflags.wc2_term_cols = 110;
-    if (iflags.wc2_term_rows == 0)
-        iflags.wc2_term_rows = 32;
 
+    getmaxyx(base_term, display_height, display_width);
+#if defined(WIN32) && !defined(WIN32CON)
+    alt_display_width = get_approx_display_cols();
+    alt_display_height = get_approx_display_rows();
+    display_width = min(230, alt_display_width);
+    display_height = min(66, alt_display_height);
+#endif
+    if (iflags.wc2_term_cols == 0)
+        iflags.wc2_term_cols = display_width;
+    if (iflags.wc2_term_rows == 0)
+        iflags.wc2_term_rows = display_height;
     resize_term(iflags.wc2_term_rows, iflags.wc2_term_cols);
     getmaxyx(base_term, term_rows, term_cols);
 

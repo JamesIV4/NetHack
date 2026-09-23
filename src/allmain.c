@@ -1,4 +1,4 @@
-/* NetHack 5.0	allmain.c	$NHDT-Date: 1771213100 2026/02/15 19:38:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.286 $ */
+/* NetHack 5.0	allmain.c	$NHDT-Date: 1781973040 2026/06/20 16:30:40 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.304 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -22,15 +22,9 @@ staticfn void regen_pw(int);
 staticfn void regen_hp(int);
 staticfn void interrupt_multi(const char *);
 
-#ifdef CRASHREPORT
-#define USED_FOR_CRASHREPORT
-#else
-#define USED_FOR_CRASHREPORT UNUSED
-#endif
-
 /*ARGSUSED*/
 void
-early_init(int argc USED_FOR_CRASHREPORT, char *argv[] USED_FOR_CRASHREPORT)
+early_init(int argc, char *argv[])
 {
     program_state_init();
 #ifdef CRASHREPORT
@@ -42,6 +36,8 @@ early_init(int argc USED_FOR_CRASHREPORT, char *argv[] USED_FOR_CRASHREPORT)
     monst_globals_init();
     sys_early_init();
     runtime_info_init();
+    nhUse(argc);
+    nhUse(argv[0]);
 }
 
 staticfn void
@@ -208,6 +204,11 @@ moveloop_core(void)
             encumber_msg();
 
             svc.context.mon_moving = TRUE;
+            /* call terrain_effects during mon_moving phase */
+            if (gp.pending_terrain_effects) {
+                terrain_effects();
+                gp.pending_terrain_effects = no_terrain_effects;
+            }
             do {
                 monscanmove = movemon();
                 if (u.umovement >= NORMAL_SPEED)
@@ -580,6 +581,9 @@ maybe_do_tutorial(void)
         vision_recalc(0);
         docrt();
         iflags.nofollowers = FALSE;
+    } else {
+        /* no tutorial, so okay to process mention_decor now */
+        rcfile_only_this_option(opt_mention_decor);
     }
 }
 
@@ -590,6 +594,9 @@ moveloop(boolean resuming)
 
     if (!resuming)
         maybe_do_tutorial();
+
+    /* process one deferred option post-tutorial */
+    rcfile_only_this_option(opt_mention_decor);
 
     for (;;) {
         moveloop_core();
@@ -737,7 +744,7 @@ init_sound_disp_gamewindows(void)
        ever having been used, use it here to pacify the Qt interface */
     start_menu(WIN_INVEN, menu_behavior), end_menu(WIN_INVEN, (char *) 0);
 
-#ifdef MACOS9
+#ifdef MAC68K
     /* This _is_ the right place for this - maybe we will
      * have to split init_sound_disp_gamewindows into
      * create_gamewindows and show_gamewindows to get rid of this ifdef...
@@ -766,6 +773,17 @@ void
 newgame(void)
 {
     int i;
+
+#ifdef SYSCF
+    time_t last_reroll_time;
+    time_t cur_reroll_time;
+    int rerolls_this_second = 0;
+# if defined(BSD) && !defined(POSIX_TYPES)
+#  define GET_REROLL_TIME(t) (void) time((long *) t);
+# else
+#  define GET_REROLL_TIME(t) (void) time(t);
+# endif
+#endif /* defined(SYSCF) */
 
     /* make sure welcome messages are given before noticing monsters */
     notice_mon_off();
@@ -817,7 +835,32 @@ newgame(void)
     docrt();
     flush_screen(1);
     bot();
+
+#ifdef SYSCF
+    GET_REROLL_TIME(&last_reroll_time);
+#endif
+
     while (u.uroleplay.reroll && reroll_menu()) {
+#ifdef SYSCF
+        if (sysopt.maxrerollrate > 0) {
+        check_reroll_time:
+            GET_REROLL_TIME(&cur_reroll_time);
+
+            if (last_reroll_time != cur_reroll_time) {
+                last_reroll_time = cur_reroll_time;
+                rerolls_this_second = 1;
+            } else {
+                if (rerolls_this_second >= sysopt.maxrerollrate) {
+                    if (!paranoid_query(TRUE, "Continue rerolling?"))
+                        break;
+                    goto check_reroll_time;
+                }
+                ++rerolls_this_second;
+            }
+        }
+#endif
+
+        ++u.uroleplay.numrerolls;
         u_init_inventory_attrs();
         bot();
     }
@@ -834,10 +877,10 @@ newgame(void)
 
     urealtime.realtime = 0L;
     urealtime.start_timing = getnow();
+    program_state.something_worth_saving++; /* useful data now exists */
 #ifdef INSURANCE
     save_currentstate();
 #endif
-    program_state.something_worth_saving++; /* useful data now exists */
 
     /* Success! */
     welcome(TRUE);

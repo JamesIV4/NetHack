@@ -1,4 +1,4 @@
-/* NetHack 5.0	explode.c	$NHDT-Date: 1736530208 2025/01/10 09:30:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.122 $ */
+/* NetHack 5.0	explode.c	$NHDT-Date: 1781973049 2026/06/20 16:30:49 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.128 $ */
 /*      Copyright (C) 1990 by Ken Arromdee */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -643,10 +643,14 @@ explode(
                 rehumanize();
             } else {
                 if (olet == MON_EXPLODE) {
-                    if (generic) /* explosion was unseen; str=="explosion", */
-                        ; /* svk.killer.name=="gas spore's explosion". */
-                    else if (str != svk.killer.name && str != hallu_buf)
+                    if (generic) {
+                        /* explosion was unseen; str=="explosion", */
+                        /* svk.killer.name=="gas spore's explosion" */
+                        if (!strcmp(str, "explosion"))
+                            Strcpy(svk.killer.name, str);
+                    } else if (str != svk.killer.name && str != hallu_buf) {
                         Strcpy(svk.killer.name, str);
+                    }
                     svk.killer.format = KILLED_BY_AN;
                 } else if (olet == TRAP_EXPLODE) {
                     svk.killer.format = NO_KILLER_PREFIX;

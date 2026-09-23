@@ -1,4 +1,4 @@
-/* NetHack 5.0  decl.h  $NHDT-Date: 1725653004 2024/09/06 20:03:24 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.377 $ */
+/* NetHack 5.0  decl.h  $NHDT-Date: 1781973078 2026/06/20 16:31:18 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.408 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2007. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -344,6 +344,7 @@ struct instance_globals_d {
     /* new */
     boolean deferred_showpaths;
     char *deferred_showpaths_dir;
+    boolean disable_glyphname_hash_indices_prefill;
 
     boolean havestate;
 };
@@ -785,6 +786,9 @@ struct instance_globals_p {
     unsigned pline_flags;
     char prevmsg[BUFSZ];
 
+    /* mon.c */
+    enum mon_terrain_effects pending_terrain_effects;
+
     /* potion.c */
     int potion_nothing;
     int potion_unkn;
@@ -802,6 +806,9 @@ struct instance_globals_p {
     int  poly_zapped;
 
     /* new stuff */
+    int puzzling_criteria;
+    char puzzling_ilets[invlet_basic + 1];
+
     boolean havestate;
 };
 
@@ -976,6 +983,9 @@ struct instance_globals_u {
 
     /* decl.c */
     boolean unweapon;
+
+        /* revision.c */
+    int uplift_needed_rev0_to_rev1;
 
     /* role.c */
     struct Role urole; /* player's role. May be munged in role_init() */
@@ -1284,6 +1294,11 @@ extern struct instance_globals_saved_w svw;
 extern struct instance_globals_saved_x svx;
 extern struct instance_globals_saved_y svy;
 extern struct sinfo program_state; /* flags describing game's current state */
+/* flags describing current level's loading/making/readiness status;
+ * restlevelstate() already associated term 'levelstate' for a different
+ * purpose, so attempt to avoid confusion
+ */
+extern struct levelstatus level_status;
 
 struct const_globals {
     const struct obj zeroobj;      /* used to zero out a struct obj */

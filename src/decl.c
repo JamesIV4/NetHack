@@ -1,4 +1,4 @@
-/* NetHack 5.0	decl.c	$NHDT-Date: 1736530208 2025/01/10 09:30:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.341 $ */
+/* NetHack 5.0	decl.c	$NHDT-Date: 1781973044 2026/06/20 16:30:44 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.368 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2009. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -313,6 +313,7 @@ static const struct instance_globals_d g_init_d = {
     FALSE, /* decor_levitate_override */
     FALSE, /* deferred_showpaths */
     NULL,  /* deferred_showpaths_dir  */
+    FALSE, /* disable_glyphname_hash_indices_prefill */
     TRUE, /* havestate*/
 };
 
@@ -636,6 +637,8 @@ static const struct instance_globals_p g_init_p = {
     /* pline.c */
     0U, /* pline_flags */
     UNDEFINED_VALUES, /* prevmsg */
+    /* mon.c */
+    no_terrain_effects, /* pending_terrain_effects */
     /* potion.c */
     UNDEFINED_VALUE, /* potion_nothing */
     UNDEFINED_VALUE, /* potion_unkn */
@@ -647,6 +650,13 @@ static const struct instance_globals_p g_init_p = {
     UNDEFINED_PTR, /* propellor */
     /* zap.c */
     UNDEFINED_VALUE, /* poly_zap */
+    0,               /*  puzzling_criteria */
+    {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    },  /* puzzling_ilets[] */
+
     TRUE, /* havestate*/
 };
 
@@ -769,6 +779,8 @@ static const struct instance_globals_u g_init_u = {
     FALSE, /* update_all */
     /* decl.c */
     FALSE, /* unweapon */
+    /* revision.c */
+    0, /* uplift_needed_rev0_to_rev1 */
     /* role.c */
     UNDEFINED_ROLE, /* urole */
     UNDEFINED_RACE, /* urace */
@@ -999,6 +1011,7 @@ static const struct instance_globals_saved_y init_svy = {
 };
 
 static const struct sinfo init_program_state = { 0 };
+static const struct levelstatus init_level_status = { 0 };
 
 #if 0
 struct instance_globals g;
@@ -1051,6 +1064,7 @@ struct instance_globals_saved_w svw;
 struct instance_globals_saved_x svx;
 struct instance_globals_saved_y svy;
 struct sinfo program_state;
+struct levelstatus level_status;
 
 const struct const_globals cg = {
     DUMMY, /* zeroobj */
@@ -1074,6 +1088,12 @@ void
 program_state_init(void)
 {
     program_state = init_program_state;
+}
+
+void
+level_status_init(void)
+{
+    level_status = init_level_status;
 }
 
 void
@@ -1184,6 +1204,9 @@ decl_globals_init(void)
 
     gu.urole = urole_init_data;
     gu.urace = urace_init_data;
+#ifdef DISABLE_GLYPHID_CACHE_PREFILL
+    gd.disable_glyphname_hash_indices_prefill = TRUE;
+#endif
 }
 
 /* fields in 'hands_obj' don't matter, just its distinct address */

@@ -59,6 +59,7 @@ void windows_nhbell(void);
 int windows_nh_poskey(int *, int *, int *);
 void windows_raw_print(const char *);
 char windows_yn_function(const char *, const char *, char);
+boolean portable = FALSE;
 /* static void windows_getlin(const char *, char *); */
 
 #ifdef WIN32CON
@@ -191,8 +192,8 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
 #endif
 #endif
 
-    set_emergency_io();
 #ifndef MSWIN_GRAPHICS
+    set_emergency_io();
     early_init(argc, argv); /* already in WinMain for MSWIN_GRAPHICS */
 #endif
 
@@ -206,8 +207,11 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     }
     gh.hname = "NetHack"; /* used for syntax messages */
     set_default_prefix_locations(
-        argv[0]); /* must be re-done after initoptions_init()
-                   * which clears out gp.fqn_prefix[] */
+        argv[0]); /* must be re-done again after initoptions_init()
+                   * because that function clears out gp.fqn_prefix[] */
+    allopt_array_init();  /* we do this here, so allopt doesn't get cleared
+                             after we disregard some */
+
     copy_sysconf_content();
     copy_symbols_content();
     /* Now that sysconf has had a chance to set the TROUBLEPREFIX, don't
@@ -218,6 +222,8 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     //   if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
     //       windowtype = gc.chosen_windowtype;
     //   windowtype = gc.chosen_windowtype;
+
+    program_state.early_options = 1;
 
 #if !defined(MSWIN_GRAPHICS)
     nethack_enter_consoletty();
@@ -237,6 +243,15 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         windowtype = "tty";
 #endif
     }
+#ifdef MSWIN_GRAPHICS
+    if (!strcmp(windowtype, "tty"))
+        windowtype = "mswin";
+#endif
+#ifdef TTY_GRAPHICS
+    if (!strcmp(windowtype, "mswin"))
+        windowtype = "tty";
+#endif
+
     choose_windows(
         windowtype); /* sets all the window port function pointers */
 
@@ -248,17 +263,19 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         error("NetHack: current directory path too long");
 #endif
     getreturn_enabled = TRUE;
+#ifdef MSWIN_GRAPHICS
+    disregard_some_mswin_options();
+#endif
     initoptions_init(); // This allows OPTIONS in syscf on Windows.
     set_default_prefix_locations(
         argv[0]); /* must be re-done after initoptions_init()
                    * which clears out gp.fqn_prefix[] */
     // iflags.windowtype_deferred = TRUE;
 
-    program_state.early_options = 1;
     /* if (GUILaunched || IsDebuggerPresent()) */
     early_options(&argc, &argv, &dir);
-    program_state.early_options = 0;
 
+    program_state.early_options = 0;
 
     initoptions();
 #if defined(CHDIR) && !defined(NOCWD_ASSUMPTIONS)
@@ -271,6 +288,9 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         raw_printf("Exiting.");
         nethack_exit(EXIT_FAILURE);
     }
+
+    genl_prag(argc, argv); /* command line options for profession, race,
+                            * alignment, gender */
 
     /* Finished processing options, lock all directory paths */
     for (int i = 0; i < PREFIX_COUNT; i++)
@@ -295,7 +315,9 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
 #ifdef WINCHAIN
     commit_windowchain();
 #endif
+
     init_nhwindows(&argc, argv);
+
 #ifdef TTY_GRAPHICS
     if WINDOWPORT(tty) {
         int i;
@@ -325,7 +347,9 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
 #elif defined(SND_LIB_WINDSOUND)
     assign_soundlib(soundlib_windsound);
 #endif
-
+#ifdef MSWIN_GRAPHICS
+    rcfile_only_some_mswin_options();
+#endif
     u.uhp = 1; /* prevent RIP on early quits */
     u.ux = 0;  /* prevent flush_screen() */
 
@@ -375,8 +399,6 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
        setting of renameallowed; when False, player_selection()
        won't resent renaming as an option */
     iflags.renameallowed = FALSE;
-    /* Obtain the name of the logged on user and incorporate
-     * it into the name. */
     Sprintf(fnamebuf, "%s", svp.plname);
     (void) fname_encode(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-.", '%',
@@ -797,15 +819,19 @@ copy_symbols_content(void)
 void
 copy_sysconf_content(void)
 {
-    /* Using the SYSCONFPREFIX path, lock it so that it does not change */
-    fqn_prefix_locked[SYSCONFPREFIX] = TRUE;
+    if (sysopt.portable_device_paths) {
+        portable = TRUE;
+    } else {
+        /* Using the SYSCONFPREFIX path, lock it so that it does not change */
+        fqn_prefix_locked[SYSCONFPREFIX] = TRUE;
 
-    update_file(gf.fqn_prefix[SYSCONFPREFIX], SYSCF_TEMPLATE,
-                gf.fqn_prefix[DATAPREFIX], SYSCF_TEMPLATE, FALSE);
+        update_file(gf.fqn_prefix[SYSCONFPREFIX], SYSCF_TEMPLATE,
+                    gf.fqn_prefix[DATAPREFIX], SYSCF_TEMPLATE, FALSE);
 
-    /* If the required early game file does not exist, copy it */
-    copy_file(gf.fqn_prefix[SYSCONFPREFIX], SYSCF_FILE,
-              gf.fqn_prefix[DATAPREFIX], SYSCF_TEMPLATE, FALSE);
+        /* If the required early game file does not exist, copy it */
+        copy_file(gf.fqn_prefix[SYSCONFPREFIX], SYSCF_FILE,
+                  gf.fqn_prefix[DATAPREFIX], SYSCF_TEMPLATE, FALSE);
+    }
 }
 
 void
@@ -1251,7 +1277,11 @@ other_self_recover_prompt(void)
     int c, ci, ct, pl, retval = 0;
     boolean ismswin = WINDOWPORT(mswin),
             iscurses = WINDOWPORT(curses);
+    int save_popupdialog = iflags.wc_popup_dialog;
 
+    if (WINDOWPORT(curses)) {
+        iflags.wc_popup_dialog = TRUE;
+    }
     pl = 1;
     c = 'n';
     ct = 0;
@@ -1301,6 +1331,9 @@ other_self_recover_prompt(void)
             retval = -1;  /* yes, do destroy the old game anyway */
         else
             retval = 1;   /* yes, do recover the old game */
+    }
+    if (WINDOWPORT(curses)) {
+        iflags.wc_popup_dialog = save_popupdialog;
     }
     return retval;
 }

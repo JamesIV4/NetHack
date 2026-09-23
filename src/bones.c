@@ -1,4 +1,4 @@
-/* NetHack 5.0	bones.c	$NHDT-Date: 1701500709 2023/12/02 07:05:09 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.129 $ */
+/* NetHack 5.0	bones.c	$NHDT-Date: 1781973041 2026/06/20 16:30:41 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.159 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985,1993. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -471,6 +471,7 @@ savebones(int how, time_t when, struct obj *corpse)
            to be given here, but it has been moved to done() so that
            it gets delivered even when savebones() isn't called] */
         drop_upon_death(mtmp, (struct obj *) 0, u.ux, u.uy);
+        assert(mtmp != NULL && mtmp->data != NULL); /* static analysis hack */
         /* 'mtmp' now has hero's inventory; if 'mtmp' is a mummy, give it
            a wrapping unless already carrying one */
         if (mtmp->data->mlet == S_MUMMY && !m_carrying(mtmp, MUMMY_WRAPPING))
@@ -660,7 +661,7 @@ getbones(void)
     }
 
     program_state.reading_bonesfile = 1;
-    if (validate(nhfp, gb.bones, FALSE) != SF_UPTODATE) {
+    if (validate(nhfp, gb.bones, FALSE, 0) != SF_UPTODATE) {
         if (!wizard)
             pline("Discarding unusable bones; no need to panic...");
         ok = FALSE;

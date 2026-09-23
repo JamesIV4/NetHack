@@ -1,4 +1,4 @@
-/* NetHack 5.0	config1.h	$NHDT-Date: 1596498530 2020/08/03 23:48:50 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.23 $ */
+/* NetHack 5.0	config1.h	$NHDT-Date: 1781973077 2026/06/20 16:31:17 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.32 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Kenneth Lorber, Kensington, Maryland, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -45,23 +45,23 @@
 #endif
 
 #ifdef macintosh /* Auto-defined symbol for MPW compilers (sc and mrc) */
-#define MACOS9
+#define MAC68K
 #endif
 
 #ifdef THINK_C /* Think C auto-defined symbol */
-#define MACOS9
+#define MAC68K
 #define NEED_VARARGS
 #endif
 
 #ifdef __MWERKS__ /* defined by Metrowerks' Codewarrior compiler */
 #ifndef __BEOS__  /* BeOS */
-#define MACOS9
+#define MAC68K
 #endif
 #define NEED_VARARGS
 #define USE_STDARG
 #endif
 
-#if defined(MACOS9) || defined(__BEOS__)
+#if defined(MAC68K) || defined(__BEOS__)
 #define DLB
 #undef UNIX
 #endif

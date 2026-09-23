@@ -1,4 +1,4 @@
-/* NetHack 5.0	wizcmds.c	$NHDT-Date: 1736530208 2025/01/10 09:30:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.21 $ */
+/* NetHack 5.0	wizcmds.c	$NHDT-Date: 1781973074 2026/06/20 16:31:14 $  $NHDT-Branch: NetHack-5.0 $:$NHDT-Revision: 1.36 $ */
 /*-Copyright (c) Robert Patrick Rankin, 2024. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -97,7 +97,9 @@ makemap_unmakemon(struct monst *mtmp, boolean migratory)
            monsters won't get out of sync; it is not on the map but
            mongone() -> m_detach() -> mon_leaving_level() copes with that */
         mtmp->mstate |= MON_OFFMAP;
-        mtmp->mstate &= ~(MON_MIGRATING | MON_LIMBO | MON_ENDGAME_MIGR);
+        mtmp->mstate &= ~(MON_MIGRATING | MON_LIMBO | MON_ENDGAME_MIGR
+                          | TERRAIN_FALLOUT_MASK);
+        /* FIXME: will post-5.0.0 MON_PARKED need to be dealt with here? */
         mtmp->nmon = fmon;
         fmon = mtmp;
     }
@@ -1945,14 +1947,16 @@ wiz_custom(void)
 #endif
         menu_item *pick_list = (menu_item *) 0;
 
-        if (!glyphid_cache_status())
-            fill_glyphid_cache();
+        if (!glyphname_hash_indices_loaded())
+            populate_glyphname_hash_indices();
 
         win = create_nhwindow(NHW_MENU);
         start_menu(win, MENU_BEHAVE_STANDARD);
-        add_menu_heading(win,
-                         "    glyph  glyph identifier                        "
-                         "     sym   clr customcolor unicode utf8");
+        const char *heading = iflags.menu_tab_sep
+                        ? "glyph\tglyph identifier\tsym\tclr\tcustomcolor\tunicode\tutf8"
+                        : "    glyph  glyph identifier                        "
+                          "     sym   clr customcolor unicode utf8";
+        add_menu_heading(win, heading);
         Sprintf(bufa, "%s: colorcount=%ld %s", wizcustom,
                 (long) iflags.colorcount,
                 gs.symset[PRIMARYSET].name ? gs.symset[PRIMARYSET].name
@@ -1964,7 +1968,7 @@ wiz_custom(void)
                     known_handling[gs.symset[PRIMARYSET].handling]);
         }
         Sprintf(buf, "%s", bufa);
-        wizcustom_glyphids(win);
+        wizcustom_glyphnames(win);
         end_menu(win, bufa);
         n = select_menu(win, PICK_NONE, &pick_list);
         destroy_nhwindow(win);
@@ -1975,8 +1979,8 @@ wiz_custom(void)
 #endif
         if (n >= 1)
             free((genericptr_t) pick_list);
-        if (glyphid_cache_status())
-            free_glyphid_cache();
+        if (glyphname_hash_indices_loaded())
+            empty_glyphname_hash_indices();
         docrt();
     } else
         pline(unavailcmd, ecname_from_fn(wiz_custom));
@@ -1989,10 +1993,8 @@ wizcustom_callback(winid win, int glyphnum, char *id)
     extern glyph_map glyphmap[MAX_GLYPH];
     glyph_map *cgm;
     int clr = NO_COLOR;
-    char buf[BUFSZ], bufa[BUFSZ], bufb[BUFSZ], bufc[BUFSZ], bufd[BUFSZ],
-        bufu[BUFSZ];
+    char buf[BUFSZ], bufa[BUFSZ], bufb[BUFSZ], bufc[BUFSZ], bufu[BUFSZ];
     anything any;
-    uint8 *cp;
 
     if (win && id) {
         cgm = &glyphmap[glyphnum];
@@ -2001,24 +2003,35 @@ wizcustom_callback(winid win, int glyphnum, char *id)
             cgm->u ||
 #endif
             cgm->customcolor != 0) {
-            Sprintf(bufa, "[%04d] %-44s", glyphnum, id);
-            Sprintf(bufb, "'\\%03d' %02d",
-                    gs.showsyms[cgm->sym.symidx], cgm->sym.color);
-            Sprintf(bufc, "%011lx", (unsigned long) cgm->customcolor);
+            if (iflags.menu_tab_sep) {
+                Sprintf(bufa, "[%04d]\t%s\t", glyphnum, id);
+                Sprintf(bufb, "'\\%03d'\t%02d\t",
+                        gs.showsyms[cgm->sym.symidx], cgm->sym.color);
+                Sprintf(bufc, "%011lx\t", (unsigned long) cgm->customcolor);
+            } else {
+                Sprintf(bufa, "[%04d] %-45s", glyphnum, id);
+                Sprintf(bufb, "'\\%03d' %02d ",
+                        gs.showsyms[cgm->sym.symidx], cgm->sym.color);
+                Sprintf(bufc, "%011lx ", (unsigned long) cgm->customcolor);
+            }
             bufu[0] = '\0';
 #ifdef ENHANCED_SYMBOLS
             if (cgm->u && cgm->u->utf8str) {
+                uint8 *cp;
+                char sep = iflags.menu_tab_sep ? '\t' : ' ';
                 Sprintf(bufu, "U+%04lx", (unsigned long) cgm->u->utf32ch);
                 cp = cgm->u->utf8str;
                 while (*cp) {
-                    Sprintf(bufd, " <%d>", (int) *cp);
+                    char bufd[BUFSZ];
+                    Sprintf(bufd, "%c<%d>", sep, (int) *cp);
                     Strcat(bufu, bufd);
                     cp++;
+                    sep = ' ';
                 }
             }
 #endif
             any.a_int = glyphnum + 1; /* avoid 0 */
-            Snprintf(buf, sizeof buf, "%s %s %s %s", bufa, bufb, bufc, bufu);
+            Snprintf(buf, sizeof buf, "%s%s%s%s", bufa, bufb, bufc, bufu);
             add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, buf,
                      MENU_ITEMFLAGS_NONE);
         }
